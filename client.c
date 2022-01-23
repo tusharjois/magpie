@@ -61,31 +61,41 @@ int main(int argc, char *argv[])
     char mess_buff[MESS_BUFF_LEN];
     int from_ip, mess_len;
     while (true) {
+        //wait for message
         await_message(mess_buff, &from_ip, &mess_len, &context);  // block until we receive a message
-        format_ip_address(buffer, from_ip);
-
         memcpy(&packet, mess_buff, sizeof(struct Packet));
 
+        //ignore packets from self (because of multicast)
         if (packet.sender_id == context.local_ip) {
             logger(DEBUG, "Received packet from self");
             continue;
         }
 
-        int ret = handle_handshake_xx_2(&packet, &context);
-        if (ret == 0) {
-            //create handshake 3
-            logger(DEBUG, "Received handshake 2 from server");
-            create_handshake_xx_3(&packet, &context);
-            logger(DEBUG, "Sending packet 3 from client to server");
-            sendto(context.ss, &packet, sizeof(struct Packet), 0, (struct sockaddr *)&(context.remote_addr), sizeof(struct sockaddr)); //broadcast to multicast port
-            context.state = TEST;
-            send_test_message(&packet, &context, 1);
-            continue;
-        }
+        //process by type
+        switch (packet.type) {
+            case HANDSHAKE_XX_2: {
+                int ret = handle_handshake_xx_2(&packet, &context);
+                if (ret == 0) {
+                    //create handshake 3
+                    create_handshake_xx_3(&packet, &context);
+                    logger(DEBUG, "Sending packet 3 from client to server");
+                    sendto(context.ss, &packet, sizeof(struct Packet), 0, (struct sockaddr *)&(context.remote_addr), sizeof(struct sockaddr)); //broadcast to multicast port
+                    context.state = TEST;
+                    client_send_test_message(&packet, &context, 1);
+                }
+                break;
+            }
+            case TEST_MESSAGE: {
+                logger(DEBUG, "Received a test message");
+                client_handle_test_messages(&packet, &context);
+                break;
+            }
 
-        ret = handle_test_messages(&packet, &context);
-        if (ret == 0) {
-            continue;
+            default: {
+                logger(DEBUG, "Undefined type %d", packet.type);
+                break;
+            }
+
         }
     }
 

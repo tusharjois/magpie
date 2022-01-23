@@ -14,29 +14,6 @@
 #include <errno.h>
 
 
-/* assemble a packet to be sent by either client or server*/
-/*int assemble_packet(struct Packet *packet, FILE *fd, int curr_idx)
-{
-    if (!packet)
-    {
-        return -1;
-    }
-    packet->seq_num = curr_idx;
-
-    size_t newLen = fread(packet->payload, sizeof(char), PAYLOAD_SIZE, fd);
-    if (ferror(fd) != 0)
-    {
-        fputs("Error reading file", stderr);
-    }
-    else
-    {
-        packet->payload[newLen++] = '\0';
-    }
-
-    return 0;
-}*/
-
-
 /* ask server to send the current contents specific file back to the client */
 void req_send_file(int curr_index, char* filename) {
     // TODO 

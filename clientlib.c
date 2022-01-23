@@ -32,12 +32,7 @@ int handle_handshake_xx_2(struct Packet* packet, struct Context* context) {
         return -1;
     }
 
-    //check that the packet type is xx2
-    if (packet->type != HANDSHAKE_XX_2) {
-        logger(DEBUG, "Received a packet with incorrect type (expecting handshake 2)");
-        return -2;
-    }
-    
+    logger(DEBUG, "Received handshake 2 from server");
     //process packet
     memcpy(context->handshake_xx_2, packet->payload, hydro_kx_XX_PACKET2BYTES);
     if (hydro_kx_xx_3(&context->hydro_state, &context->session_kp, context->handshake_xx_3, NULL, context->handshake_xx_2, NULL,
@@ -63,11 +58,17 @@ int create_handshake_xx_3(struct Packet* packet, struct Context* context) {
 }
 
 
-int handle_test_messages(struct Packet* packet, struct Context* context) {
-    
+int client_handle_test_messages(struct Packet* packet, struct Context* context) {
+
     //check that client is ready for test messages
     if (context->state != TEST) {
         return -1;
+    }
+
+    //check for correct order
+    if (packet->seq_num != context->rx_seq_num + 1) {
+        logger(DEBUG, "Out of sequence packet (Expecting: %d, Actual: %d)", context->rx_seq_num + 1, packet->seq_num);
+        return -3;
     }
     
     char plaintext[PLAINTEXT_SIZE];
@@ -80,32 +81,36 @@ int handle_test_messages(struct Packet* packet, struct Context* context) {
     if (hydro_secretbox_decrypt(plaintext, ciphertext, CIPHERTEXT_SIZE, 0, CONTEXT, context->session_kp.rx) != 0) {
         logger(DEBUG, "Message forged!");
     } else {
-        int x;
-        memcpy(&x, plaintext, sizeof(int));
-        logger(TRACE, "Message content: %d", x);
-        send_test_message(packet, context, x + 1);
+        struct TestRequest req;
+        memcpy(&req, plaintext, sizeof(struct TestRequest));
+        logger(TRACE, "Message content: %d", req.num);
+        context->rx_seq_num++;
+        client_send_test_message(packet, context, req.num + 1);
     }
 
     return 0;
 }
 
 /* Send a sample message with integer num as the message content */
-int send_test_message(struct Packet* packet, struct Context* context, int num) {
+int client_send_test_message(struct Packet* packet, struct Context* context, int num) {
 
     char plaintext[PLAINTEXT_SIZE];
     char ciphertext[CIPHERTEXT_SIZE];
+    struct TestRequest req;
     memset(plaintext, 0, PLAINTEXT_SIZE);
 
-    packet->sender_id = context->local_ip;
-    int x = num;
-    memcpy(plaintext, &x, sizeof(int));
+    req.num = num;
+    logger(TRACE, "Message content: %d", req.num);
 
-    logger(TRACE, "Message content: %d", x);
+    packet->sender_id = context->local_ip;
+    packet->type = TEST_MESSAGE;
+    memcpy(plaintext, &req, sizeof(struct TestRequest));
+    packet->seq_num = ++context->tx_seq_num;
 
     hydro_secretbox_encrypt(ciphertext, plaintext, PLAINTEXT_SIZE, 0, CONTEXT, context->session_kp.tx);
     memcpy(packet->payload, ciphertext, CIPHERTEXT_SIZE);
 
-    logger(DEBUG, "hash of packet before sending: %u", hash(packet, sizeof(struct Packet)));
+    //logger(DEBUG, "hash of packet before sending: %u", hash(packet, sizeof(struct Packet)));
     
     sendto(context->ss, packet, sizeof(struct Packet), 0, (struct sockaddr *)&(context->remote_addr), sizeof(struct sockaddr));
     logger(DEBUG, "Sending example message from client to server");

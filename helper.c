@@ -64,6 +64,8 @@ void setup(struct Context* context)
     context->timeout.tv_sec = 1;
     context->timeout.tv_usec = 0;
 
+    context->rx_seq_num = context->tx_seq_num = START_SEQ_NUM - 1;
+
 }
 
 void await_message(char* mess_buff, int* from_ip, int* mess_len, struct Context* context) {

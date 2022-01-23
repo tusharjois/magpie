@@ -45,38 +45,49 @@ int main(int argc, char *argv[])
 
         //wait to receive from the client
         await_message(mess_buff, &from_ip, &mess_len, &context);
-        format_ip_address(buffer, from_ip);
-
-        //process the initial request from the client & populate packet2
         memcpy(&packet, mess_buff, sizeof(struct Packet));
 
+        //ignore packets from self
         if (packet.sender_id == context.local_ip) {
             logger(DEBUG, "Received packet from self");
             continue;
         }
 
-        int ret = handle_handshake_xx_1(&packet, &context);
-        if (ret == 0) {
-            //create handshake 2
-            logger(DEBUG, "Received handshake 1 from client");
-            create_handshake_xx_2(&packet, &context);
-            logger(DEBUG, "Sending packet 2 from server to client");
-            sendto(context.ss, &packet, sizeof(struct Packet), 0, (struct sockaddr *)&(context.remote_addr), sizeof(struct sockaddr)); //broadcast to multicast port
-            context.state = AWAITING_XX_3;
-            continue;
-        }
+        //process by type
+        switch (packet.type) {
 
-        ret = handle_handshake_xx_3(&packet, &context);
-        if (ret == 0) {
-            logger(DEBUG, "Received handshake 3 from client, ready to receive.");
-            //all done with handshake
-            context.state = TEST;
-            continue;
-        }
+            case HANDSHAKE_XX_1: {
+                int ret = handle_handshake_xx_1(&packet, &context);
+                if (ret == 0) {
+                    //create handshake 2
+                    logger(DEBUG, "Received handshake 1 from client");
+                    create_handshake_xx_2(&packet, &context);
+                    logger(DEBUG, "Sending packet 2 from server to client");
+                    sendto(context.ss, &packet, sizeof(struct Packet), 0, (struct sockaddr *)&(context.remote_addr), sizeof(struct sockaddr)); //broadcast to multicast port
+                    context.state = AWAITING_XX_3;
+                }
+                break;
+            }
 
-        ret = handle_test_messages(&packet, &context);
-        if (ret == 0) {
-            continue;
+            case HANDSHAKE_XX_3: {
+                int ret = handle_handshake_xx_3(&packet, &context);
+                if (ret == 0) {
+                    logger(DEBUG, "Received handshake 3 from client, ready to receive.");
+                    //all done with handshake
+                    context.state = TEST;
+                }
+                break;
+            }
+
+            case TEST_MESSAGE: {
+                server_handle_test_messages(&packet, &context);
+                break;
+            }
+
+            default: {
+                logger(DEBUG, "Undefined type %d", packet.type);
+                break;
+            }
         }
 
     }

@@ -4,6 +4,7 @@
 #include "logger.h"
 #include <stdlib.h>
 #include "hydrogen.h"
+#include "messages.h"
 
 #define PORT 10225
 #define MCAST_ADDR (225 << 24 | 1 << 16 | 1 << 8 | 140) /* (225.1.1.140) */
@@ -48,6 +49,8 @@ struct Context {
     uint8_t handshake_xx_3[hydro_kx_XX_PACKET3BYTES];
 
     enum State state;
+    int tx_seq_num; //remember which packet number was last sent
+    int rx_seq_num; //remember which packet number was last received
 };
 
 void setup(struct Context* context);

@@ -8,27 +8,38 @@
 #define PLAINTEXT_SIZE (PAYLOAD_SIZE - hydro_secretbox_HEADERBYTES)
 #define CIPHERTEXT_SIZE (PAYLOAD_SIZE)
 #define FIRST_MESSAGE_IDX 1
+#define MAX_FILE_NAME 256
+#define START_SEQ_NUM 1
 
 enum Type {
     HANDSHAKE_XX_1 = 1, 
     HANDSHAKE_XX_2 = 2,
     HANDSHAKE_XX_3 = 3,
     HANDSHAKE_XX_4 = 4,
-    READ_INIT = 5, 
-    READ_CONTENT = 6
+    READ_FILE = 5,
+    WRITE_FILE = 6,
+    DELETE_FILE = 7,
+    TEST_MESSAGE = 8
 };
 
 struct Packet {
-    uint32_t seq_num;
+    uint16_t seq_num;
     enum Type type;
-    uint16_t status;
     int sender_id;
+    uint8_t probe[hydro_secretbox_PROBEBYTES];
     char payload[PAYLOAD_SIZE];
 };
 
 
-/* assemble a packet to be sent by either client or server*/
-//int assemble_packet(struct Packet *packet, FILE *fd, int curr_idx);
+/* operation request initiated by the client */
+struct ReadRequest {
+    char filename[MAX_FILE_NAME];
+};
+
+struct TestRequest {
+    int num;
+};
+
 
 
 /** CLIENT MESSAGES **/
