@@ -74,10 +74,16 @@ int client_handle_test_messages(struct Packet* packet, struct Context* context) 
     char plaintext[PLAINTEXT_SIZE];
     char ciphertext[CIPHERTEXT_SIZE];
     memset(plaintext, 0, PLAINTEXT_SIZE);
-
-    //decrypt packet
     memcpy(ciphertext, packet->payload, CIPHERTEXT_SIZE);
 
+    //check the probe
+    int ret = hydro_secretbox_probe_verify(packet->probe, ciphertext, CIPHERTEXT_SIZE, CONTEXT, context->session_kp.rx);
+    if (ret != 0) {
+        logger(DEBUG, "Probe Failed to Verify");
+        return -4;
+    }
+
+    //decrypt packet
     if (hydro_secretbox_decrypt(plaintext, ciphertext, CIPHERTEXT_SIZE, 0, CONTEXT, context->session_kp.rx) != 0) {
         logger(DEBUG, "Message forged!");
     } else {
@@ -109,6 +115,9 @@ int client_send_test_message(struct Packet* packet, struct Context* context, int
 
     hydro_secretbox_encrypt(ciphertext, plaintext, PLAINTEXT_SIZE, 0, CONTEXT, context->session_kp.tx);
     memcpy(packet->payload, ciphertext, CIPHERTEXT_SIZE);
+
+    //create the probe
+    hydro_secretbox_probe_create(packet->probe, ciphertext, CIPHERTEXT_SIZE, CONTEXT, context->session_kp.tx);
 
     //logger(DEBUG, "hash of packet before sending: %u", hash(packet, sizeof(struct Packet)));
     
