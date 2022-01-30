@@ -1,21 +1,8 @@
 //server.c - the device/implant
-#include <sys/time.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <sys/select.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <errno.h>
-#include "hydrogen.h"
-#include "keys.h"
+
+#include "serverlib.h"
 #include "helper.h"
 #include "messages.h"
-#include "logger.h"
-#include "serverlib.h"
 
 int main(int argc, char *argv[])
 {
@@ -62,8 +49,10 @@ int main(int argc, char *argv[])
                     //create handshake 2
                     logger(DEBUG, "Received handshake 1 from client");
                     create_handshake_xx_2(&packet, &context);
+                    usleep(1000);
                     logger(DEBUG, "Sending packet 2 from server to client");
-                    sendto(context.ss, &packet, sizeof(struct Packet), 0, (struct sockaddr *)&(context.remote_addr), sizeof(struct sockaddr)); //broadcast to multicast port
+                    send_mc_msg(&packet, sizeof(struct Packet), &context);
+                    //sendto(context.ss, &packet, sizeof(struct Packet), 0, (struct sockaddr *)&(context.remote_addr), sizeof(struct sockaddr)); //broadcast to multicast port
                     context.state = AWAITING_XX_3;
                 }
                 break;
@@ -81,6 +70,12 @@ int main(int argc, char *argv[])
 
             case TEST_MESSAGE: {
                 server_handle_test_messages(&packet, &context);
+                break;
+            }
+
+            case READ_FILE: {
+                struct ReadRequest req;
+                handle_read_request(&packet, &context, &req);
                 break;
             }
 

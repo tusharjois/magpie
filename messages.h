@@ -1,46 +1,17 @@
 #ifndef MESSAGES_H
 #define MESSAGES_H
 
-#include <stdlib.h>
-#include "hydrogen.h"
+#include "structs.h"
 
-#define PAYLOAD_SIZE 1400
-#define PLAINTEXT_SIZE (PAYLOAD_SIZE - hydro_secretbox_HEADERBYTES)
-#define CIPHERTEXT_SIZE (PAYLOAD_SIZE)
-#define FIRST_MESSAGE_IDX 1
-#define MAX_FILE_NAME 256
-#define START_SEQ_NUM 1
+/** General Functions **/
 
-enum Type {
-    HANDSHAKE_XX_1 = 1, 
-    HANDSHAKE_XX_2 = 2,
-    HANDSHAKE_XX_3 = 3,
-    HANDSHAKE_XX_4 = 4,
-    READ_FILE = 5,
-    WRITE_FILE = 6,
-    DELETE_FILE = 7,
-    TEST_MESSAGE = 8
-};
+int encrypt_packet(char* plaintext, struct Packet* packet, struct Context* context); 
 
-struct Packet {
-    uint16_t seq_num;
-    enum Type type;
-    int sender_id;
-    uint8_t probe[hydro_secretbox_PROBEBYTES];
-    char payload[PAYLOAD_SIZE];
-};
+/* decrypt the packet after receiving, include probe checking */
+int decrypt_packet(char* plaintext, struct Packet* packet, struct Context* context);
 
-
-/* operation request initiated by the client */
-struct ReadRequest {
-    char filename[MAX_FILE_NAME];
-};
-
-struct TestRequest {
-    int num;
-};
-
-
+/* send the message over multicast to the remote address */
+int send_mc_msg(char* msg_buff, int msg_len, struct Context* context);
 
 /** CLIENT MESSAGES **/
 

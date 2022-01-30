@@ -1,19 +1,8 @@
 //serverlib.c
 
-#include <sys/time.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <sys/select.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <errno.h>
-#include "hydrogen.h"
-#include "serverlib.h"
-#include "logger.h"
+#include "serverlib.h" 
+#include "messages.h"
+#include "helper.h"
 
 int handle_handshake_xx_1(struct Packet* packet, struct Context* context) {
 
@@ -46,6 +35,7 @@ int create_handshake_xx_2(struct Packet* packet, struct Context* context) {
     // Done! session_kp.tx is the key for sending data to the server,
     // and session_kp.rx is the key for receiving data from the server.
 
+    return 0;
 }
 
 int handle_handshake_xx_3(struct Packet* packet, struct Context* context) {
@@ -100,14 +90,14 @@ int server_handle_test_messages(struct Packet* packet, struct Context* context) 
     memcpy(ciphertext, packet->payload, CIPHERTEXT_SIZE);
 
     //check the probe
-    int ret = hydro_secretbox_probe_verify(packet->probe, ciphertext, CIPHERTEXT_SIZE, CONTEXT, context->session_kp.rx);
+    int ret = hydro_secretbox_probe_verify(packet->probe, (uint8_t *) ciphertext, CIPHERTEXT_SIZE, CONTEXT, context->session_kp.rx);
     if (ret != 0) {
         logger(DEBUG, "Probe Failed to Verify");
         return -4;
     }
 
     //decrypt packet
-    if (hydro_secretbox_decrypt(plaintext, ciphertext, CIPHERTEXT_SIZE, 0, CONTEXT, context->session_kp.rx) != 0) {
+    if (hydro_secretbox_decrypt(plaintext, (uint8_t *) ciphertext, CIPHERTEXT_SIZE, 0, CONTEXT, context->session_kp.rx) != 0) {
         logger(DEBUG, "Message forged!");
     } else {
         struct TestRequest req;
@@ -136,11 +126,11 @@ int server_send_test_message(struct Packet* packet, struct Context* context, int
     memcpy(plaintext, &req, sizeof(struct TestRequest));
     packet->seq_num = ++context->tx_seq_num;
 
-    hydro_secretbox_encrypt(ciphertext, plaintext, PLAINTEXT_SIZE, 0, CONTEXT, context->session_kp.tx);
+    hydro_secretbox_encrypt((uint8_t *) ciphertext, plaintext, PLAINTEXT_SIZE, 0, CONTEXT, context->session_kp.tx);
     memcpy(packet->payload, ciphertext, CIPHERTEXT_SIZE);
 
     //create the probe
-    hydro_secretbox_probe_create(packet->probe, ciphertext, CIPHERTEXT_SIZE, CONTEXT, context->session_kp.tx);
+    hydro_secretbox_probe_create(packet->probe, (uint8_t *) ciphertext, CIPHERTEXT_SIZE, CONTEXT, context->session_kp.tx);
 
     //logger(DEBUG, "hash of packet before sending: %u", hash(packet, sizeof(struct Packet)));
     
@@ -150,3 +140,31 @@ int server_send_test_message(struct Packet* packet, struct Context* context, int
 
     return 0;
 }
+
+int handle_read_request(struct Packet* packet, struct Context* context, struct ReadRequest* req) {
+    
+    char plaintext[PLAINTEXT_SIZE];
+
+    //check that server is ready for test messages
+    if (context->state != TEST) {
+        return -1;
+    }
+
+    //check that this is a read file message type
+    if (packet->type != READ_FILE) {
+        return -2;
+    }
+
+    //check for correct order
+    if (packet->seq_num != context->rx_seq_num + 1) {
+        logger(DEBUG, "Out of sequence packet (Expecting: %d, Actual: %d)", context->rx_seq_num + 1, packet->seq_num);
+        return -3;
+    }
+
+    decrypt_packet(plaintext, packet, context);
+    memcpy(req, plaintext, sizeof(struct ReadRequest));
+    logger(DEBUG, "Received request to send filename %s", req->filename);
+
+    return 0;
+}
+

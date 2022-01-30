@@ -1,19 +1,9 @@
 //clientlib.c
 
-#include <sys/time.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <sys/select.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <errno.h>
-#include "hydrogen.h"
 #include "clientlib.h"
-#include "logger.h"
+#include "messages.h"
+#include "helper.h"
+
 
 int create_handshake_xx_1(struct Packet* packet, struct Context* context) {
     // Create and send first packet
@@ -29,6 +19,7 @@ int handle_handshake_xx_2(struct Packet* packet, struct Context* context) {
 
     //check that client is ready for xx2
     if (context->state != AWAITING_XX_2) {
+        logger(DEBUG, "Incorrect context state");
         return -1;
     }
 
@@ -77,14 +68,14 @@ int client_handle_test_messages(struct Packet* packet, struct Context* context) 
     memcpy(ciphertext, packet->payload, CIPHERTEXT_SIZE);
 
     //check the probe
-    int ret = hydro_secretbox_probe_verify(packet->probe, ciphertext, CIPHERTEXT_SIZE, CONTEXT, context->session_kp.rx);
+    int ret = hydro_secretbox_probe_verify(packet->probe, (uint8_t *)ciphertext, CIPHERTEXT_SIZE, CONTEXT, context->session_kp.rx);
     if (ret != 0) {
         logger(DEBUG, "Probe Failed to Verify");
         return -4;
     }
 
     //decrypt packet
-    if (hydro_secretbox_decrypt(plaintext, ciphertext, CIPHERTEXT_SIZE, 0, CONTEXT, context->session_kp.rx) != 0) {
+    if (hydro_secretbox_decrypt(plaintext, (uint8_t *)ciphertext, CIPHERTEXT_SIZE, 0, CONTEXT, context->session_kp.rx) != 0) {
         logger(DEBUG, "Message forged!");
     } else {
         struct TestRequest req;
@@ -101,9 +92,9 @@ int client_handle_test_messages(struct Packet* packet, struct Context* context) 
 int client_send_test_message(struct Packet* packet, struct Context* context, int num) {
 
     char plaintext[PLAINTEXT_SIZE];
-    char ciphertext[CIPHERTEXT_SIZE];
-    struct TestRequest req;
     memset(plaintext, 0, PLAINTEXT_SIZE);
+
+    struct TestRequest req;
 
     req.num = num;
     logger(TRACE, "Message content: %d", req.num);
@@ -113,17 +104,33 @@ int client_send_test_message(struct Packet* packet, struct Context* context, int
     memcpy(plaintext, &req, sizeof(struct TestRequest));
     packet->seq_num = ++context->tx_seq_num;
 
-    hydro_secretbox_encrypt(ciphertext, plaintext, PLAINTEXT_SIZE, 0, CONTEXT, context->session_kp.tx);
-    memcpy(packet->payload, ciphertext, CIPHERTEXT_SIZE);
-
-    //create the probe
-    hydro_secretbox_probe_create(packet->probe, ciphertext, CIPHERTEXT_SIZE, CONTEXT, context->session_kp.tx);
-
+    encrypt_packet(plaintext, packet, context);
     //logger(DEBUG, "hash of packet before sending: %u", hash(packet, sizeof(struct Packet)));
     
     sendto(context->ss, packet, sizeof(struct Packet), 0, (struct sockaddr *)&(context->remote_addr), sizeof(struct sockaddr));
     logger(DEBUG, "Sending example message from client to server");
     sleep(1);
+
+    return 0;
+}
+
+/* File Transfer: Create Request Packet to ask server for current contents of a specified file */
+int create_send_req(struct Packet* packet, struct Context* context) {
+
+    struct ReadRequest req;
+    memcpy(req.filename, context->filename, NAME_LENGTH);
+
+    char plaintext[PLAINTEXT_SIZE];
+    memset(plaintext, 0, PLAINTEXT_SIZE);
+    memcpy(plaintext, &req, sizeof(struct ReadRequest));
+
+    packet->sender_id = context->local_ip;
+    packet->type = READ_FILE;
+    packet->seq_num = ++context->tx_seq_num;
+
+    encrypt_packet(plaintext, packet, context);
+
+    //done! packet is ready to send
 
     return 0;
 }

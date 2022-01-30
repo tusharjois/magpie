@@ -1,17 +1,5 @@
 //helper.c
 
-#include <sys/time.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <sys/select.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <errno.h>
-#include "hydrogen.h"
 #include "helper.h"
 
 
@@ -36,7 +24,7 @@ void format_ip_address(char* buffer, int ip) {
 void setup(struct Context* context)
 {
     // Initialize logger
-    logger_init(ALL, true);
+    logger_init(DEBUG, true);
 
     // Initialize LibHydrogen
     if (hydro_init() != 0)
@@ -88,8 +76,22 @@ void await_message(char* mess_buff, int* from_ip, int* mess_len, struct Context*
             {
                 *mess_len = recvfrom(context->sr, mess_buff, MESS_BUFF_LEN, 0, (struct sockaddr *)&src_addr, &addrlen);
                 *from_ip = src_addr.sin_addr.s_addr;
-                if (has_flushed)
+                if (has_flushed) {
                     printf("\n");
+                }
+                
+                char local_ip_buff[128];
+                char remote_ip_buff[128];
+                memset(local_ip_buff, 0, 128);
+                memset(remote_ip_buff, 0, 128);
+
+                format_ip_address(local_ip_buff, context->local_ip);
+                format_ip_address(remote_ip_buff, *from_ip);
+
+                unsigned int h = hash(mess_buff, *mess_len);
+
+                logger(DEBUG, "Received %d byte message from %s to %s. Digest: %u", *mess_len, remote_ip_buff, local_ip_buff, h);
+
                 return;
             }
         }

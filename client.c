@@ -1,22 +1,8 @@
 //client.c - the phone/tablet
 
-#include <sys/time.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <sys/select.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <errno.h>
-#include "hydrogen.h"
-#include "keys.h"
+#include "clientlib.h"
 #include "helper.h"
 #include "messages.h"
-#include "logger.h"
-#include "clientlib.h"
 
 int main(int argc, char *argv[])
 {
@@ -53,8 +39,9 @@ int main(int argc, char *argv[])
 
     struct Packet packet;
     logger(DEBUG, "Creating & sending packet 1 from client to server");
-    create_handshake_xx_1(&packet, &context);    
-    sendto(context.ss, &packet, sizeof(struct Packet), 0, (struct sockaddr *)&(context.remote_addr), sizeof(struct sockaddr)); //broadcast to multicast port
+    create_handshake_xx_1(&packet, &context);   
+    send_mc_msg(&packet, sizeof(struct Packet), &context); 
+    //sendto(context.ss, &packet, sizeof(struct Packet), 0, (struct sockaddr *)&(context.remote_addr), sizeof(struct sockaddr)); //broadcast to multicast port
     context.state = AWAITING_XX_2;
 
     //wait until you receive response from the server
@@ -77,11 +64,19 @@ int main(int argc, char *argv[])
                 int ret = handle_handshake_xx_2(&packet, &context);
                 if (ret == 0) {
                     //create handshake 3
+                    usleep(1000);
                     create_handshake_xx_3(&packet, &context);
                     logger(DEBUG, "Sending packet 3 from client to server");
-                    sendto(context.ss, &packet, sizeof(struct Packet), 0, (struct sockaddr *)&(context.remote_addr), sizeof(struct sockaddr)); //broadcast to multicast port
+                    send_mc_msg(&packet, sizeof(struct Packet), &context);
+                    //sendto(context.ss, &packet, sizeof(struct Packet), 0, (struct sockaddr *)&(context.remote_addr), sizeof(struct sockaddr)); //broadcast to multicast port
                     context.state = TEST;
-                    client_send_test_message(&packet, &context, 1);
+                    //client_send_test_message(&packet, &context, 1);
+
+                    //TODO: standardize operation name
+                    if (strcmp("send_file", context.operation)) {
+                        create_send_req(&packet, &context);
+                        send_mc_msg(&packet, sizeof(struct Packet), &context);
+                    }
                 }
                 break;
             }
