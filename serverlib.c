@@ -141,12 +141,13 @@ int server_send_test_message(struct Packet* packet, struct Context* context, int
     return 0;
 }
 
-int handle_read_request(struct Packet* packet, struct Context* context, struct ReadRequest* req) {
+int handle_read_request(struct Packet* packet, struct Context* context) {
     
     char plaintext[PLAINTEXT_SIZE];
+    struct ReadRequest req;
 
-    //check that server is ready for test messages
-    if (context->state != TEST) {
+    //check that server is ready for messages
+    if (context->state != READY) {
         return -1;
     }
 
@@ -160,11 +161,61 @@ int handle_read_request(struct Packet* packet, struct Context* context, struct R
         logger(DEBUG, "Out of sequence packet (Expecting: %d, Actual: %d)", context->rx_seq_num + 1, packet->seq_num);
         return -3;
     }
+    context->rx_seq_num = packet->seq_num;
 
     decrypt_packet(plaintext, packet, context);
-    memcpy(req, plaintext, sizeof(struct ReadRequest));
-    logger(DEBUG, "Received request to send filename %s", req->filename);
+    memcpy(&req, plaintext, sizeof(struct ReadRequest));
+    logger(DEBUG, "Received request to send filename %s", req.filename);
 
+    if (context->fd == NULL) {
+        //then we are sending a new file
+        logger(DEBUG, "First time opening this file %s", req.filename);
+        strcpy(context->filename, req.filename);
+        context->fd = fopen(context->filename, "r");
+        if (context->fd == NULL)
+        {
+            logger(WARN, "Can't open file: %s", context->filename);
+            return -4;
+            //TODO: Populate return packet with an error code to indicate bad filename
+        }
+    }  else {
+        //else, just continue because fd and filename are already set up
+        logger(DEBUG, "Continuing to send file %s", req.filename);
+    }
+
+    //fill the response with the next set of data from the file
+    struct ReadResponse res;
+    int i;
+    res.is_last_packet = 0;
+
+    for(i = 0; i < READ_DATA_SIZE; i++) {
+        char c = fgetc(context->fd);
+        if (c != EOF) {
+            res.data[i] = c;
+        } else {
+            logger(DEBUG, "This will be the last packet");
+            res.is_last_packet = 1;
+            fclose(context->fd);
+            context->fd = NULL;
+            memset(context->filename, 0, MAX_FILE_NAME);
+            break;
+        }
+    }
+    res.num_bytes = i;
+
+    logger(DEBUG, "Setting up the rest of the packet");
+    //Set up the rest of the packet
+    packet->sender_id = context->local_ip;
+    packet->type = READ_FILE;
+    packet->seq_num = ++context->tx_seq_num;
+    memcpy(plaintext, &res, sizeof(struct ReadResponse));
+
+    logger(DEBUG, "Encrypting");
+    //finally, encrypt it
+    encrypt_packet(plaintext, packet, context);
+
+    logger(DEBUG, "Done, ready to send");
+    //done, packet is ready to send
     return 0;
 }
 

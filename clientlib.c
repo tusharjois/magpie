@@ -115,7 +115,7 @@ int client_send_test_message(struct Packet* packet, struct Context* context, int
 }
 
 /* File Transfer: Create Request Packet to ask server for current contents of a specified file */
-int create_send_req(struct Packet* packet, struct Context* context) {
+int create_read_req(struct Packet* packet, struct Context* context) {
 
     struct ReadRequest req;
     memcpy(req.filename, context->filename, NAME_LENGTH);
@@ -128,9 +128,76 @@ int create_send_req(struct Packet* packet, struct Context* context) {
     packet->type = READ_FILE;
     packet->seq_num = ++context->tx_seq_num;
 
+
     encrypt_packet(plaintext, packet, context);
 
     //done! packet is ready to send
 
     return 0;
+}
+
+int handle_read_response(struct Packet* packet, struct Context* context) {
+
+    char plaintext[PLAINTEXT_SIZE];
+    struct ReadResponse res;
+
+    //check that client is ready for messages
+    if (context->state != READY) {
+        return -1;
+    }
+
+    //check that this is a read file message type
+    if (packet->type != READ_FILE) {
+        return -2;
+    }
+
+    //check for correct order
+    if (packet->seq_num != context->rx_seq_num + 1) {
+        logger(DEBUG, "Out of sequence packet (Expecting: %d, Actual: %d)", context->rx_seq_num + 1, packet->seq_num);
+        return -3;
+    }
+
+    context->rx_seq_num = packet->seq_num;
+
+    decrypt_packet(plaintext, packet, context);
+
+    memcpy(&res, plaintext, sizeof(struct ReadResponse));
+    logger(DEBUG, "Received data for filename %s", context->filename);
+
+    //TODO: temporary because using ugrad
+    logger(DEBUG, "Saving data to file temp.txt");
+    strcpy(context->filename, "temp.txt");
+
+    if (context->fd == NULL) {
+        //then we are starting a new file
+        logger(DEBUG, "Starting a new file");
+        context->fd = fopen(context->filename, "w");
+        if (context->fd == NULL)
+        {
+            logger(WARN, "Can't open file: %s", context->filename);
+            return -4;
+        }
+    } else {
+        //else, just continue because fd is already open so it is not a new file
+        logger(DEBUG, "File already open, continuing to add");
+    }
+    for(int i = 0; i < res.num_bytes; i++) {
+        char c = res.data[i];
+        fputc(c, context->fd);
+    }
+
+    if (res.is_last_packet) {
+        //last packet, close file
+        logger(DEBUG, "Last packet, closing the file");
+        fclose(context->fd);
+        context->fd = NULL;
+    } else {
+        //send up packet asking server for the next part
+        create_read_req(packet, context);
+        logger(DEBUG, "Done setting up next read request, ready to send");
+    }
+
+
+    return 0;
+
 }

@@ -34,6 +34,9 @@ void setup(struct Context* context)
         exit(1);
     }
 
+    //everything null to start
+    memset(context, 0, sizeof(struct Context));
+
     // Get local IP Address
     get_my_ip_address(&(context->local_ip));
     char buffer[128];

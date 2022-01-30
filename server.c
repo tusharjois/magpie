@@ -52,7 +52,6 @@ int main(int argc, char *argv[])
                     usleep(1000);
                     logger(DEBUG, "Sending packet 2 from server to client");
                     send_mc_msg(&packet, sizeof(struct Packet), &context);
-                    //sendto(context.ss, &packet, sizeof(struct Packet), 0, (struct sockaddr *)&(context.remote_addr), sizeof(struct sockaddr)); //broadcast to multicast port
                     context.state = AWAITING_XX_3;
                 }
                 break;
@@ -63,7 +62,7 @@ int main(int argc, char *argv[])
                 if (ret == 0) {
                     logger(DEBUG, "Received handshake 3 from client, ready to receive.");
                     //all done with handshake
-                    context.state = TEST;
+                    context.state = READY;
                 }
                 break;
             }
@@ -74,8 +73,9 @@ int main(int argc, char *argv[])
             }
 
             case READ_FILE: {
-                struct ReadRequest req;
-                handle_read_request(&packet, &context, &req);
+                logger(DEBUG, "Received a Read Request");
+                handle_read_request(&packet, &context);
+                send_mc_msg((char*)&packet, sizeof(struct Packet), &context);
                 break;
             }
 

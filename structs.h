@@ -29,6 +29,7 @@
 #define PAYLOAD_SIZE 1400
 #define PLAINTEXT_SIZE (PAYLOAD_SIZE - hydro_secretbox_HEADERBYTES)
 #define CIPHERTEXT_SIZE (PAYLOAD_SIZE)
+#define READ_DATA_SIZE (PLAINTEXT_SIZE - 32)
 #define FIRST_MESSAGE_IDX 1
 #define MAX_FILE_NAME 256
 #define START_SEQ_NUM 1
@@ -56,6 +57,12 @@ struct Packet {
 /* operation request initiated by the client */
 struct ReadRequest {
     char filename[MAX_FILE_NAME];
+};
+
+struct ReadResponse {
+    short num_bytes;
+    short is_last_packet;
+    char data[READ_DATA_SIZE];
 };
 
 struct TestRequest {
@@ -88,6 +95,8 @@ struct Context {
 
     char filename[NAME_LENGTH];
     char operation[NAME_LENGTH];
+
+    FILE *fd;
 
     hydro_kx_state hydro_state;
     hydro_kx_session_keypair session_kp;

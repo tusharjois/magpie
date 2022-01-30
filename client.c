@@ -22,12 +22,12 @@ int main(int argc, char *argv[])
 
     // TODO: Do this later
     // TODO: check operation, execute based on what it is
-    FILE *fd = fopen(context.filename, "r");
+    /*FILE *fd = fopen(context.filename, "r");
     if (fd == NULL)
     {
         logger(FATAL, "Can't open file: %s", context.filename);
         exit(1);
-    }
+    }*/
 
     /** key exchange (xx variant): client **/
 
@@ -69,12 +69,12 @@ int main(int argc, char *argv[])
                     logger(DEBUG, "Sending packet 3 from client to server");
                     send_mc_msg(&packet, sizeof(struct Packet), &context);
                     //sendto(context.ss, &packet, sizeof(struct Packet), 0, (struct sockaddr *)&(context.remote_addr), sizeof(struct sockaddr)); //broadcast to multicast port
-                    context.state = TEST;
+                    context.state = READY;
                     //client_send_test_message(&packet, &context, 1);
 
                     //TODO: standardize operation name
                     if (strcmp("send_file", context.operation)) {
-                        create_send_req(&packet, &context);
+                        create_read_req(&packet, &context);
                         send_mc_msg(&packet, sizeof(struct Packet), &context);
                     }
                 }
@@ -83,6 +83,12 @@ int main(int argc, char *argv[])
             case TEST_MESSAGE: {
                 logger(DEBUG, "Received a test message");
                 client_handle_test_messages(&packet, &context);
+                break;
+            }
+
+            case READ_FILE: {
+                logger(DEBUG, "Received a read file message");
+                handle_read_response(&packet, &context);
                 break;
             }
 

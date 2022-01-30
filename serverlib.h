@@ -14,6 +14,6 @@ int server_handle_test_messages(struct Packet* packet, struct Context* context);
 
 int server_send_test_message(struct Packet* packet, struct Context* context, int num);
 
-int handle_read_request(struct Packet* packet, struct Context* context, struct ReadRequest* req);
+int handle_read_request(struct Packet* packet, struct Context* context);
 
 #endif

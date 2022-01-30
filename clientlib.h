@@ -16,7 +16,7 @@ int client_handle_test_messages(struct Packet* packet, struct Context* context);
 /* Send a sample message with integer num as the message content */
 int client_send_test_message(struct Packet* packet, struct Context* context, int num);
 
-int create_send_req(struct Packet* packet, struct Context* context);
+int create_read_req(struct Packet* packet, struct Context* context);
 
 
 #endif
