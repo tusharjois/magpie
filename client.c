@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
                 int ret = handle_handshake_xx_2(&packet, &context);
                 if (ret == 0) {
                     //create handshake 3
-                    usleep(1000);
+                    usleep(10000);
                     create_handshake_xx_3(&packet, &context);
                     logger(DEBUG, "Sending packet 3 from client to server");
                     send_mc_msg(&packet, sizeof(struct Packet), &context);
@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
                     //client_send_test_message(&packet, &context, 1);
 
                     //TODO: standardize operation name
-                    if (strcmp("send_file", context.operation)) {
+                    if (strcmp("read_file", context.operation) == 0) {
                         create_read_req(&packet, &context);
                         send_mc_msg(&packet, sizeof(struct Packet), &context);
                     }
@@ -88,7 +88,13 @@ int main(int argc, char *argv[])
 
             case READ_FILE: {
                 logger(DEBUG, "Received a read file message");
-                handle_read_response(&packet, &context);
+                int ret = handle_read_response(&packet, &context);
+                if (ret == 0) {
+                    send_mc_msg(&packet, sizeof(struct Packet), &context);
+                } if (ret > 0) {
+                    //we've finished sending, so exit (TODO: make this continuous)
+                    exit(0);
+                }
                 break;
             }
 

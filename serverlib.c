@@ -193,7 +193,7 @@ int handle_read_request(struct Packet* packet, struct Context* context) {
         if (c != EOF) {
             res.data[i] = c;
         } else {
-            logger(DEBUG, "This will be the last packet");
+            logger(DEBUG, "This will be the last packet. EOF at index: %d", i);
             res.is_last_packet = 1;
             fclose(context->fd);
             context->fd = NULL;

@@ -191,6 +191,7 @@ int handle_read_response(struct Packet* packet, struct Context* context) {
         logger(DEBUG, "Last packet, closing the file");
         fclose(context->fd);
         context->fd = NULL;
+        return 1;
     } else {
         //send up packet asking server for the next part
         create_read_req(packet, context);

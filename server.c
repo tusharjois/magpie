@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
                     //create handshake 2
                     logger(DEBUG, "Received handshake 1 from client");
                     create_handshake_xx_2(&packet, &context);
-                    usleep(1000);
+                    usleep(10000);
                     logger(DEBUG, "Sending packet 2 from server to client");
                     send_mc_msg(&packet, sizeof(struct Packet), &context);
                     context.state = AWAITING_XX_3;

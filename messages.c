@@ -41,8 +41,11 @@ int decrypt_packet(char* plaintext, struct Packet* packet, struct Context* conte
 
 }
 
+static int NUM_SENT = 0;
+
 /* send the message over multicast to the remote address */
 int send_mc_msg(char* msg_buff, int msg_len, struct Context* context) {
+
 
     char local_ip_buff[128];
     char remote_ip_buff[128];
@@ -57,9 +60,13 @@ int send_mc_msg(char* msg_buff, int msg_len, struct Context* context) {
 
     logger(DEBUG, "Sending %d byte message from %s to %s. Digest: %u", msg_len, local_ip_buff, remote_ip_buff, h);
     
-
     sendto(context->ss, msg_buff, msg_len, 0, 
         (struct sockaddr *)&(context->remote_addr), sizeof(struct sockaddr));
+
+    if (++NUM_SENT >= 50) {
+        logger(FATAL, "Max sends reached");
+        exit(1);
+    }
 
     logger(DEBUG, "Sent successfully");
     
