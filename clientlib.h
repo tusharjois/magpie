@@ -17,6 +17,8 @@ int client_send_test_message(struct Packet* packet, struct Context* context, int
 
 int create_read_req(struct Packet* packet, struct Context* context);
 
+int handle_read_response(struct Packet* packet, struct Context* context);
+
 int create_write_req(struct Packet* packet, struct Context* context);
 
 int create_write_data(struct Packet* packet, struct Context* context);
