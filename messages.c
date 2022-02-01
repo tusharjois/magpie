@@ -16,6 +16,9 @@ int encrypt_packet(char* plaintext, struct Packet* packet, struct Context* conte
     //create the probe
     hydro_secretbox_probe_create(packet->probe, (uint8_t *)ciphertext, CIPHERTEXT_SIZE, CONTEXT, context->session_kp.tx);
 
+    //set packet number
+    packet->seq_num = ++context->tx_seq_num;
+    
     return 0;
 } 
 
@@ -23,6 +26,14 @@ int encrypt_packet(char* plaintext, struct Packet* packet, struct Context* conte
 int decrypt_packet(char* plaintext, struct Packet* packet, struct Context* context) {
 
     char* ciphertext = packet->payload;
+
+    //check for correct order (Cannot decrypt out of order packets. Also, you cannot decrypt the same packet multiple times)
+    if (packet->seq_num != context->rx_seq_num + 1) {
+        logger(DEBUG, "Out of sequence packet (Expecting: %d, Actual: %d)", context->rx_seq_num + 1, packet->seq_num);
+        return -3;
+    }
+
+    context->rx_seq_num = packet->seq_num;
     
     //check the probe
     int ret = hydro_secretbox_probe_verify(packet->probe, (uint8_t *)ciphertext, CIPHERTEXT_SIZE, CONTEXT, context->session_kp.rx);
@@ -36,6 +47,7 @@ int decrypt_packet(char* plaintext, struct Packet* packet, struct Context* conte
         logger(DEBUG, "Message forged!");
         return -1;
     } 
+
 
     return 0;
 

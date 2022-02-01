@@ -118,6 +118,7 @@ int client_send_test_message(struct Packet* packet, struct Context* context, int
 int create_read_req(struct Packet* packet, struct Context* context) {
 
     struct ReadRequest req;
+    memset(&req, 0, sizeof(struct ReadRequest));
     memcpy(req.filename, context->filename, NAME_LENGTH);
 
     char plaintext[PLAINTEXT_SIZE];
@@ -126,9 +127,7 @@ int create_read_req(struct Packet* packet, struct Context* context) {
 
     packet->sender_id = context->local_ip;
     packet->type = READ_FILE;
-    packet->seq_num = ++context->tx_seq_num;
-
-
+    
     encrypt_packet(plaintext, packet, context);
 
     //done! packet is ready to send
@@ -151,15 +150,12 @@ int handle_read_response(struct Packet* packet, struct Context* context) {
         return -2;
     }
 
-    //check for correct order
-    if (packet->seq_num != context->rx_seq_num + 1) {
-        logger(DEBUG, "Out of sequence packet (Expecting: %d, Actual: %d)", context->rx_seq_num + 1, packet->seq_num);
-        return -3;
+    int ret = decrypt_packet(plaintext, packet, context);
+
+    if (ret != 0) {
+        //TODO: do something more productive than just return
+        return -1;
     }
-
-    context->rx_seq_num = packet->seq_num;
-
-    decrypt_packet(plaintext, packet, context);
 
     memcpy(&res, plaintext, sizeof(struct ReadResponse));
     logger(DEBUG, "Received data for filename %s", context->filename);
@@ -198,7 +194,91 @@ int handle_read_response(struct Packet* packet, struct Context* context) {
         logger(DEBUG, "Done setting up next read request, ready to send");
     }
 
+    return 0;
+
+}
+
+/* File Transfer: Create Request Packet to ask server to write to specified file */
+int create_write_req(struct Packet* packet, struct Context* context) {
+
+    //first, send filename
+    struct WriteRequest req;
+    memset(&req, 0, sizeof(struct WriteRequest));
+    memcpy(req.data, context->filename, NAME_LENGTH);
+    req.is_filename = 1; //Tell server that data contains the filename only
+    req.is_last_packet = 0;
+    req.num_bytes = NAME_LENGTH;
+
+    //TODO: eventually, let user chose the mode
+    strcpy(req.mode, "w");
+
+    char plaintext[PLAINTEXT_SIZE];
+    memset(plaintext, 0, PLAINTEXT_SIZE);
+    memcpy(plaintext, &req, sizeof(struct WriteRequest));
+
+    packet->sender_id = context->local_ip;
+    packet->type = WRITE_FILE;
+
+    encrypt_packet(plaintext, packet, context);
+
+    //done! packet is ready to send
 
     return 0;
+}
+
+/* File Transfer: Create Request Packet to send data to server for a write request */
+int create_write_data(struct Packet* packet, struct Context* context) {
+
+    struct WriteRequest req;
+    memset(&req, 0, sizeof(struct WriteRequest));
+    req.is_filename = 0;
+
+    if (context->fd == NULL) {
+        //then we are sending a new file
+        logger(DEBUG, "First time opening this file %s", context->filename);
+        context->fd = fopen(context->filename, "r");
+        if (context->fd == NULL)
+        {
+            logger(WARN, "Can't open file: %s", context->filename);
+            return -4;
+        }
+    }  else {
+        //else, just continue because fd and filename are already set up
+        logger(DEBUG, "Continuing to send file %s", context->filename);
+    }
+
+    //fill the response with the next set of data from the file
+    int i;
+    req.is_last_packet = 0;
+
+    for(i = 0; i < WRITE_DATA_SIZE; i++) {
+        char c = fgetc(context->fd);
+        if (c != EOF) {
+            req.data[i] = c;
+        } else {
+            logger(DEBUG, "This will be the last packet. EOF at index: %d", i);
+            req.is_last_packet = 1;
+            fclose(context->fd);
+            context->fd = NULL;
+            break;
+        }
+    }
+    req.num_bytes = i;
+
+    logger(DEBUG, "Setting up the rest of the packet");
+    char plaintext[PLAINTEXT_SIZE];
+    //Set up the rest of the packet
+    packet->sender_id = context->local_ip;
+    packet->type = WRITE_FILE;
+    memcpy(plaintext, &req, sizeof(struct WriteRequest));
+
+    logger(DEBUG, "Encrypting");
+    //finally, encrypt it
+    encrypt_packet(plaintext, packet, context);
+
+    logger(DEBUG, "Done, ready to send");
+    //done, packet is ready to send
+    return 0;
+
 
 }

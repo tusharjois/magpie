@@ -30,9 +30,11 @@
 #define PLAINTEXT_SIZE (PAYLOAD_SIZE - hydro_secretbox_HEADERBYTES)
 #define CIPHERTEXT_SIZE (PAYLOAD_SIZE)
 #define READ_DATA_SIZE (PLAINTEXT_SIZE - 32)
+#define WRITE_DATA_SIZE (PLAINTEXT_SIZE - 32)
 #define FIRST_MESSAGE_IDX 1
 #define MAX_FILE_NAME 256
 #define START_SEQ_NUM 1
+#define NUM_MODE_BYTES 2
 
 enum Type {
     HANDSHAKE_XX_1 = 1, 
@@ -63,6 +65,18 @@ struct ReadResponse {
     short num_bytes;
     short is_last_packet;
     char data[READ_DATA_SIZE];
+};
+
+struct WriteRequest {
+    short num_bytes;
+    short is_last_packet;
+    short is_filename;
+    char mode[NUM_MODE_BYTES];
+    char data[WRITE_DATA_SIZE];
+};
+
+struct WriteResponse {
+    char filename[MAX_FILE_NAME];
 };
 
 struct TestRequest {

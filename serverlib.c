@@ -124,7 +124,6 @@ int server_send_test_message(struct Packet* packet, struct Context* context, int
     packet->sender_id = context->local_ip;
     packet->type = TEST_MESSAGE;
     memcpy(plaintext, &req, sizeof(struct TestRequest));
-    packet->seq_num = ++context->tx_seq_num;
 
     hydro_secretbox_encrypt((uint8_t *) ciphertext, plaintext, PLAINTEXT_SIZE, 0, CONTEXT, context->session_kp.tx);
     memcpy(packet->payload, ciphertext, CIPHERTEXT_SIZE);
@@ -156,13 +155,6 @@ int handle_read_request(struct Packet* packet, struct Context* context) {
         return -2;
     }
 
-    //check for correct order
-    if (packet->seq_num != context->rx_seq_num + 1) {
-        logger(DEBUG, "Out of sequence packet (Expecting: %d, Actual: %d)", context->rx_seq_num + 1, packet->seq_num);
-        return -3;
-    }
-    context->rx_seq_num = packet->seq_num;
-
     decrypt_packet(plaintext, packet, context);
     memcpy(&req, plaintext, sizeof(struct ReadRequest));
     logger(DEBUG, "Received request to send filename %s", req.filename);
@@ -185,6 +177,7 @@ int handle_read_request(struct Packet* packet, struct Context* context) {
 
     //fill the response with the next set of data from the file
     struct ReadResponse res;
+    memset(&res, 0, sizeof(struct ReadResponse));
     int i;
     res.is_last_packet = 0;
 
@@ -207,7 +200,6 @@ int handle_read_request(struct Packet* packet, struct Context* context) {
     //Set up the rest of the packet
     packet->sender_id = context->local_ip;
     packet->type = READ_FILE;
-    packet->seq_num = ++context->tx_seq_num;
     memcpy(plaintext, &res, sizeof(struct ReadResponse));
 
     logger(DEBUG, "Encrypting");
@@ -218,4 +210,77 @@ int handle_read_request(struct Packet* packet, struct Context* context) {
     //done, packet is ready to send
     return 0;
 }
+
+int handle_write_request(struct Packet* packet, struct Context* context) {
+
+    char plaintext[PLAINTEXT_SIZE];
+    struct WriteRequest req;
+
+    //check that server is ready for messages
+    if (context->state != READY) {
+        return -1;
+    }
+
+    //check that this is a read file message type
+    if (packet->type != WRITE_FILE) {
+        return -2;
+    }
+
+    int ret = decrypt_packet(plaintext, packet, context);
+    if (ret != 0) {
+        //TODO: do something more productive than just return
+        return -1;
+    }
+
+    memcpy(&req, plaintext, sizeof(struct WriteRequest));
+
+    //check to see if this is the first one we receive
+    if (req.is_filename) {
+        logger(DEBUG, "Received request to write to filename %s", req.data);
+        
+        //TODO: temporary because using ugrad
+        logger(DEBUG, "Saving data to file temp.txt");
+        strcpy(context->filename, "temp.txt");
+
+        context->fd = fopen(context->filename, req.mode);
+        if (context->fd == NULL)
+        {
+            logger(WARN, "Can't open file: %s", context->filename);
+            return -4;
+            //TODO: Populate return packet with an error code to indicate bad filename
+        }
+    } else {
+        //this does not contain the filename and thus we've already opened it
+        logger(DEBUG, "File already open, continuing to add");
+
+        for(int i = 0; i < req.num_bytes; i++) {
+            char c = req.data[i];
+            fputc(c, context->fd);
+        }
+
+        if (req.is_last_packet) {
+            //last packet, close file and be done
+            logger(DEBUG, "Last packet, closing the file");
+            fclose(context->fd);
+            context->fd = NULL;
+            return 1;
+        }
+    }
+
+    //send response packet to client asking for more data
+    struct WriteResponse res;
+    memset(&res, 0, sizeof(struct WriteResponse));
+    strcpy(res.filename, context->filename);
+    packet->sender_id = context->local_ip;
+    packet->type = WRITE_FILE;
+    memcpy(plaintext, &res, sizeof(struct WriteResponse));
+
+    logger(DEBUG, "Encrypting");
+    //finally, encrypt it
+    encrypt_packet(plaintext, packet, context);
+    
+    logger(DEBUG, "Done setting up next write response, ready to send");
+    return 0;
+}
+
 

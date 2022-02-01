@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
                     create_handshake_xx_2(&packet, &context);
                     usleep(10000);
                     logger(DEBUG, "Sending packet 2 from server to client");
-                    send_mc_msg(&packet, sizeof(struct Packet), &context);
+                    send_mc_msg((char*)&packet, sizeof(struct Packet), &context);
                     context.state = AWAITING_XX_3;
                 }
                 break;
@@ -76,6 +76,15 @@ int main(int argc, char *argv[])
                 logger(DEBUG, "Received a Read Request");
                 handle_read_request(&packet, &context);
                 send_mc_msg((char*)&packet, sizeof(struct Packet), &context);
+                break;
+            }
+
+            case WRITE_FILE: {
+                logger(DEBUG, "Received a Write Request");
+                int ret = handle_write_request(&packet, &context);
+                if (ret == 0) {
+                    send_mc_msg((char*)&packet, sizeof(struct Packet), &context);
+                } 
                 break;
             }
 

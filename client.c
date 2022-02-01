@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
     //TODO: make this persistent instead of running once per command
     if (argc != 3)
     {
-        logger(FATAL, "usage: ./client <operation> <filename>");
+        logger(FATAL, "usage: ./client <operation> <filename> \n Possible operations: read_file, write_file, delete_file");
         exit(1);
     }
 
@@ -76,7 +76,10 @@ int main(int argc, char *argv[])
                     if (strcmp("read_file", context.operation) == 0) {
                         create_read_req(&packet, &context);
                         send_mc_msg(&packet, sizeof(struct Packet), &context);
-                    }
+                    } else if (strcmp("write_file", context.operation) == 0) {
+                        create_write_req(&packet, &context);
+                        send_mc_msg((char*)&packet, sizeof(struct Packet), &context);
+                    } 
                 }
                 break;
             }
@@ -90,11 +93,17 @@ int main(int argc, char *argv[])
                 logger(DEBUG, "Received a read file message");
                 int ret = handle_read_response(&packet, &context);
                 if (ret == 0) {
-                    send_mc_msg(&packet, sizeof(struct Packet), &context);
+                    send_mc_msg((char*)&packet, sizeof(struct Packet), &context);
                 } if (ret > 0) {
                     //we've finished sending, so exit (TODO: make this continuous)
                     exit(0);
                 }
+                break;
+            }
+
+            case WRITE_FILE: {
+                create_write_data(&packet, &context);
+                send_mc_msg((char*)&packet, sizeof(struct Packet), &context);
                 break;
             }
 
