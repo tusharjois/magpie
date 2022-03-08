@@ -6,7 +6,7 @@
 
 int main(int argc, char *argv[])
 {
-    struct Context context;
+    struct magpie_context context;
     setup(&context);
 
     if (argc != 1)
@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
     format_keypair(buffer, &context.local_kp);
     logger(DEBUG, "Server keypair:\n%s", buffer);
 
-    struct Packet packet;
+    struct magpie_packet packet;
     char mess_buff[MESS_BUFF_LEN];
     int from_ip, mess_len;
     context.state = AWAITING_XX_1;
@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
 
         //wait to receive from the client
         await_message(mess_buff, &from_ip, &mess_len, &context);
-        memcpy(&packet, mess_buff, sizeof(struct Packet));
+        memcpy(&packet, mess_buff, sizeof(struct magpie_packet));
 
         //ignore packets from self
         if (packet.sender_id == context.local_ip) {
@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
                     create_handshake_xx_2(&packet, &context);
                     usleep(10000);
                     logger(DEBUG, "Sending packet 2 from server to client");
-                    send_mc_msg((char*)&packet, sizeof(struct Packet), &context);
+                    send_mc_msg((char*)&packet, sizeof(struct magpie_packet), &context);
                     context.state = AWAITING_XX_3;
                 }
                 break;
@@ -67,15 +67,10 @@ int main(int argc, char *argv[])
                 break;
             }
 
-            case TEST_MESSAGE: {
-                server_handle_test_messages(&packet, &context);
-                break;
-            }
-
             case READ_FILE: {
                 logger(DEBUG, "Received a Read Request");
                 handle_read_request(&packet, &context);
-                send_mc_msg((char*)&packet, sizeof(struct Packet), &context);
+                send_mc_msg((char*)&packet, sizeof(struct magpie_packet), &context);
                 break;
             }
 
@@ -83,7 +78,7 @@ int main(int argc, char *argv[])
                 logger(DEBUG, "Received a Write Request");
                 int ret = handle_write_request(&packet, &context);
                 if (ret == 0) {
-                    send_mc_msg((char*)&packet, sizeof(struct Packet), &context);
+                    send_mc_msg((char*)&packet, sizeof(struct magpie_packet), &context);
                 } 
                 break;
             }

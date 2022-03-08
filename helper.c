@@ -21,7 +21,7 @@ void format_ip_address(char* buffer, int ip) {
         (htonl(ip) & 0x000000ff));
 }
 
-void setup(struct Context* context)
+void setup(struct magpie_context* context)
 {
     // Initialize logger
     logger_init(DEBUG, true);
@@ -35,7 +35,7 @@ void setup(struct Context* context)
     }
 
     //everything null to start
-    memset(context, 0, sizeof(struct Context));
+    memset(context, 0, sizeof(struct magpie_context));
 
     // Get local IP Address
     get_my_ip_address(&(context->local_ip));
@@ -59,7 +59,7 @@ void setup(struct Context* context)
 
 }
 
-void await_message(char* mess_buff, int* from_ip, int* mess_len, struct Context* context) {
+void await_message(char* mess_buff, int* from_ip, int* mess_len, struct magpie_context* context) {
     struct sockaddr_in src_addr;
     struct timeval timeout;
     socklen_t addrlen;
@@ -108,7 +108,7 @@ void await_message(char* mess_buff, int* from_ip, int* mess_len, struct Context*
     }
 }
 
-void setup_mcast(struct Context* context) {
+void setup_mcast(struct magpie_context* context) {
     logger(TRACE, "check");
     struct hostent h_ent;
     struct hostent *p_h_ent;

@@ -36,7 +36,7 @@
 #define START_SEQ_NUM 1
 #define NUM_MODE_BYTES 2
 
-enum Type {
+enum magpie_type {
     HANDSHAKE_XX_1 = 1, 
     HANDSHAKE_XX_2 = 2,
     HANDSHAKE_XX_3 = 3,
@@ -47,9 +47,9 @@ enum Type {
     TEST_MESSAGE = 8
 };
 
-struct Packet {
+struct magpie_packet {
     uint16_t seq_num;
-    enum Type type;
+    enum magpie_type type;
     int sender_id;
     uint8_t probe[hydro_secretbox_PROBEBYTES];
     char payload[PAYLOAD_SIZE];
@@ -57,17 +57,17 @@ struct Packet {
 
 
 /* operation request initiated by the client */
-struct ReadRequest {
+struct magpie_read_request {
     char filename[MAX_FILE_NAME];
 };
 
-struct ReadResponse {
+struct magpie_read_response {
     short num_bytes;
     short is_last_packet;
     char data[READ_DATA_SIZE];
 };
 
-struct WriteRequest {
+struct magpie_write_request {
     short num_bytes;
     short is_last_packet;
     short is_filename;
@@ -75,15 +75,15 @@ struct WriteRequest {
     char data[WRITE_DATA_SIZE];
 };
 
-struct WriteResponse {
+struct magpie_write_response {
     char filename[MAX_FILE_NAME];
 };
 
-struct TestRequest {
+/*struct TestRequest {
     int num;
-};
+};*/
 
-enum State {
+enum magpie_state {
     READY = 0,
     AWAITING_XX_1 = 1,
     AWAITING_XX_2 = 2,
@@ -92,7 +92,7 @@ enum State {
     TEST = 5
 };
 
-struct Context {
+struct magpie_context {
     int ss; //socket send
     int sr; //socket receive
 
@@ -120,7 +120,7 @@ struct Context {
     uint8_t handshake_xx_2[hydro_kx_XX_PACKET2BYTES];
     uint8_t handshake_xx_3[hydro_kx_XX_PACKET3BYTES];
 
-    enum State state;
+    enum magpie_state state;
     int tx_seq_num; //remember which packet number was last sent
     int rx_seq_num; //remember which packet number was last received
 };

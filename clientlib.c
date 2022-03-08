@@ -5,7 +5,7 @@
 #include "helper.h"
 
 
-int create_handshake_xx_1(struct Packet* packet, struct Context* context) {
+int create_handshake_xx_1(struct magpie_packet* packet, struct magpie_context* context) {
     // Create and send first packet
     int ret = hydro_kx_xx_1(&context->hydro_state, context->handshake_xx_1, NULL);
 
@@ -15,7 +15,7 @@ int create_handshake_xx_1(struct Packet* packet, struct Context* context) {
     return ret;
 }
 
-int handle_handshake_xx_2(struct Packet* packet, struct Context* context) {
+int handle_handshake_xx_2(struct magpie_packet* packet, struct magpie_context* context) {
 
     //check that client is ready for xx2
     if (context->state != AWAITING_XX_2) {
@@ -37,7 +37,7 @@ int handle_handshake_xx_2(struct Packet* packet, struct Context* context) {
     return 0;
 }
 
-int create_handshake_xx_3(struct Packet* packet, struct Context* context) {
+int create_handshake_xx_3(struct magpie_packet* packet, struct magpie_context* context) {
 
     packet->sender_id = context->local_ip;
     packet->type = HANDSHAKE_XX_3;
@@ -49,7 +49,7 @@ int create_handshake_xx_3(struct Packet* packet, struct Context* context) {
 }
 
 
-int client_handle_test_messages(struct Packet* packet, struct Context* context) {
+/*int client_handle_test_messages(struct magpie_packet* packet, struct magpie_context* context) {
 
     //check that client is ready for test messages
     if (context->state != TEST) {
@@ -86,10 +86,11 @@ int client_handle_test_messages(struct Packet* packet, struct Context* context) 
     }
 
     return 0;
-}
+}*/
 
 /* Send a sample message with integer num as the message content */
-int client_send_test_message(struct Packet* packet, struct Context* context, int num) {
+/*
+int client_send_test_message(struct Packet* packet, struct magpie_context* context, int num) {
 
     char plaintext[PLAINTEXT_SIZE];
     memset(plaintext, 0, PLAINTEXT_SIZE);
@@ -113,17 +114,18 @@ int client_send_test_message(struct Packet* packet, struct Context* context, int
 
     return 0;
 }
+*/
 
 /* File Transfer: Create Request Packet to ask server for current contents of a specified file */
-int create_read_req(struct Packet* packet, struct Context* context) {
+int create_read_req(struct magpie_packet* packet, struct magpie_context* context) {
 
-    struct ReadRequest req;
-    memset(&req, 0, sizeof(struct ReadRequest));
+    struct magpie_read_request req;
+    memset(&req, 0, sizeof(struct magpie_read_request));
     memcpy(req.filename, context->filename, NAME_LENGTH);
 
     char plaintext[PLAINTEXT_SIZE];
     memset(plaintext, 0, PLAINTEXT_SIZE);
-    memcpy(plaintext, &req, sizeof(struct ReadRequest));
+    memcpy(plaintext, &req, sizeof(struct magpie_read_request));
 
     packet->sender_id = context->local_ip;
     packet->type = READ_FILE;
@@ -135,10 +137,10 @@ int create_read_req(struct Packet* packet, struct Context* context) {
     return 0;
 }
 
-int handle_read_response(struct Packet* packet, struct Context* context) {
+int handle_read_response(struct magpie_packet* packet, struct magpie_context* context) {
 
     char plaintext[PLAINTEXT_SIZE];
-    struct ReadResponse res;
+    struct magpie_read_response res;
 
     //check that client is ready for messages
     if (context->state != READY) {
@@ -157,7 +159,7 @@ int handle_read_response(struct Packet* packet, struct Context* context) {
         return -1;
     }
 
-    memcpy(&res, plaintext, sizeof(struct ReadResponse));
+    memcpy(&res, plaintext, sizeof(struct magpie_read_response));
     logger(DEBUG, "Received data for filename %s", context->filename);
 
     //TODO: temporary because using ugrad
@@ -199,11 +201,11 @@ int handle_read_response(struct Packet* packet, struct Context* context) {
 }
 
 /* File Transfer: Create Request Packet to ask server to write to specified file */
-int create_write_req(struct Packet* packet, struct Context* context) {
+int create_write_req(struct magpie_packet* packet, struct magpie_context* context) {
 
     //first, send filename
-    struct WriteRequest req;
-    memset(&req, 0, sizeof(struct WriteRequest));
+    struct magpie_write_request req;
+    memset(&req, 0, sizeof(struct magpie_write_request));
     memcpy(req.data, context->filename, NAME_LENGTH);
     req.is_filename = 1; //Tell server that data contains the filename only
     req.is_last_packet = 0;
@@ -214,7 +216,7 @@ int create_write_req(struct Packet* packet, struct Context* context) {
 
     char plaintext[PLAINTEXT_SIZE];
     memset(plaintext, 0, PLAINTEXT_SIZE);
-    memcpy(plaintext, &req, sizeof(struct WriteRequest));
+    memcpy(plaintext, &req, sizeof(struct magpie_write_request));
 
     packet->sender_id = context->local_ip;
     packet->type = WRITE_FILE;
@@ -227,10 +229,10 @@ int create_write_req(struct Packet* packet, struct Context* context) {
 }
 
 /* File Transfer: Create Request Packet to send data to server for a write request */
-int create_write_data(struct Packet* packet, struct Context* context) {
+int create_write_data(struct magpie_packet* packet, struct magpie_context* context) {
 
-    struct WriteRequest req;
-    memset(&req, 0, sizeof(struct WriteRequest));
+    struct magpie_write_request req;
+    memset(&req, 0, sizeof(struct magpie_write_request));
     req.is_filename = 0;
 
     if (context->fd == NULL) {
@@ -270,7 +272,7 @@ int create_write_data(struct Packet* packet, struct Context* context) {
     //Set up the rest of the packet
     packet->sender_id = context->local_ip;
     packet->type = WRITE_FILE;
-    memcpy(plaintext, &req, sizeof(struct WriteRequest));
+    memcpy(plaintext, &req, sizeof(struct magpie_write_request));
 
     logger(DEBUG, "Encrypting");
     //finally, encrypt it

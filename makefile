@@ -1,4 +1,4 @@
-CC=gcc
+CC=gcc 
 
 CFLAGS = -g -c -Wall -pedantic
 
