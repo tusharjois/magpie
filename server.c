@@ -15,10 +15,11 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    /** key exchange (kk variant): server **/
+    /** key exchange (xx variant): server **/
 
     //load server static kp
-    load_server_kp(&context.local_kp);
+    //load_server_kp(&context.local_kp);
+    load_local_kp("keys/keypair_1", &context.local_kp);
     char buffer[1024];
     format_keypair(buffer, &context.local_kp);
     logger(DEBUG, "Server keypair:\n%s", buffer);

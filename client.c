@@ -23,7 +23,8 @@ int main(int argc, char *argv[])
     /** key exchange (xx variant): client **/
 
     //load client static kp
-    load_client_kp(&context.local_kp);
+    //load_client_kp(&context.local_kp);
+    load_local_kp("keys/keypair_0", &context.local_kp);
     char buffer[1024];
     format_keypair(buffer, &context.local_kp);
     logger(DEBUG, "Client keypair:\n%s", buffer);

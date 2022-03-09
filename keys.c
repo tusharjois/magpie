@@ -24,8 +24,10 @@
 
 STATIC KEYPAIRS:
     * these are constants, that are determined & known before the protocol runs
-    * eventually, will likely come from a file "secrets.txt" or similar
+    * if you need to generate keypairs, use the generate_keys script located in this library
     * the ones hardcoded here were determined using libhydrogen's function 'hydro_kx_keygen(&static_kp);'
+
+EXAMPLE: 
 
 SERVER:
    public key {187, 118, 150, 119, 29, 47, 169, 69, 189, 19, 188, 81, 252, 170, 53, 182, 5, 5, 52, 171, 25, 22, 159, 200, 227, 6, 236, 113, 239, 190, 245, 24}
@@ -37,7 +39,23 @@ CLIENT:
     secret: {174, 220, 123, 182, 231, 141, 11, 204, 183, 152, 237, 53, 163, 109, 9, 123, 209, 161, 183, 239, 249, 243, 132, 82, 177, 48, 29, 46, 223, 11, 251, 42}
 */
 
+
+void load_local_kp(char* filepath, hydro_kx_keypair* kp) {
+    //load the keypair from a file located at filepath 
+    //must be formatted as a key generated from the hydro_kx_keygen(&static_kp) function
+
+    FILE* fd;
+    fd = fopen(filepath, "r");
+
+    fread(kp->pk, hydro_kx_PUBLICKEYBYTES, sizeof(char), fd);
+    fread(kp->sk, hydro_kx_SECRETKEYBYTES, sizeof(char), fd);
+    fclose(fd);
+
+}
+
+
 void load_server_kp(hydro_kx_keypair* server_static_kp) {
+    //example key for server
 
     //populate the server's static kp - hardcoded or stored in a file that we read from (not published)
     //must remain consistent
@@ -107,19 +125,3 @@ void print_keypair(hydro_kx_keypair* kp) {
     printf("}\n");
 
 }
-
-/*int main(int argc, char *argv[])
-{
-    hydro_kx_keypair server_static_kp;
-    hydro_kx_keypair client_static_kp;
-
-    //hydro_kx_keygen(&server_static_kp);
-
-    load_server_kp(&server_static_kp);
-    load_client_kp(&client_static_kp);
-
-    print_keypair(&server_static_kp);
-    print_keypair(&client_static_kp);
-
-    return 0;
-}*/

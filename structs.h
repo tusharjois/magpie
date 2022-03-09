@@ -1,7 +1,6 @@
 #ifndef STRUCTS_H
 #define STRUCTS_H
 
-#include <stdio.h>
 #include <sys/time.h>
 #include <stdio.h>
 #include <stdlib.h>
