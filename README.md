@@ -22,11 +22,10 @@ All clients and server must have a stored public and private key. You can genera
 
 For example, after generating the keypair stored in keys/keypair_0, your client can load the keypair for use and then print it out so that you can see the keypair:
 
-''char buffer[1024];
-
+    char buffer[1024];
     load_local_kp("keys/keypair_0", &context.local_kp);
     format_keypair(buffer, &context.local_kp);
-    logger(DEBUG, "Client keypair:\n%s", buffer);''
+    logger(DEBUG, "Client keypair:\n%s", buffer);
 
 
 ### Encryption and Decryption
