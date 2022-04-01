@@ -27,6 +27,8 @@ For example, after generating the keypair stored in keys/keypair_0, your client 
     format_keypair(buffer, &context.local_kp);
     logger(DEBUG, "Client keypair:\n%s", buffer);
 
+After loading the keypair on both the client and server side, the key exchange needs to occur. 
+
 
 ### Encryption and Decryption
 

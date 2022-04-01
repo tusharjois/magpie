@@ -48,6 +48,6 @@ void logger(int level, const char* fmt, ...) {
         set_formatter(FMT_BUFFER, fmt, level);
         vfprintf(stdout, FMT_BUFFER, args);
         if (FORCE_FLUSH)
-            fflush(0);  // 0 = stdout
+            fflush(stdout);  // 0 = stdout
     }
 }

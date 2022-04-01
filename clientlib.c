@@ -127,6 +127,8 @@ int create_read_req(struct magpie_packet* packet, struct magpie_context* context
     memset(plaintext, 0, PLAINTEXT_SIZE);
     memcpy(plaintext, &req, sizeof(struct magpie_read_request));
 
+    //TODO: "serialize" plaintext packet
+
     packet->sender_id = context->local_ip;
     packet->type = READ_FILE;
     
