@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
     FILE* fd;
 
     for(int i = 0; i < num_kps; i++) {
-        sprintf(filename, "keys/keypair_%d", i);
+        sprintf(filename, "keys/kp%d", i);
         fd = fopen(filename, "w");
 
         hydro_kx_keypair new_kp;
