@@ -2,19 +2,23 @@ CC=gcc
 
 CFLAGS = -g -c -Wall -pedantic
 
-all: client server generate_keys
+all: test client server generate_keys
 
-client: client.o keys.o hydrogen.o helper.o messages.o logger.o clientlib.o
-	    $(CC) -o client client.o keys.o hydrogen.o helper.o messages.o logger.o clientlib.o
+test: test.o hydrogen.o logger.o magpielib.o
+	    $(CC) -o test test.o hydrogen.o logger.o magpielib.o
 
-server: server.o keys.o hydrogen.o helper.o messages.o logger.o serverlib.o
-	    $(CC) -o server server.o keys.o hydrogen.o helper.o messages.o logger.o serverlib.o
+client: client.o  hydrogen.o logger.o magpielib.o
+	    $(CC) -o client client.o hydrogen.o logger.o magpielib.o
+
+server: server.o hydrogen.o logger.o magpielib.o
+	    $(CC) -o server server.o hydrogen.o logger.o magpielib.o
 
 generate_keys: generate_keys.o hydrogen.o logger.o
 		$(CC) -o generate_keys generate_keys.o hydrogen.o logger.o
 
 clean:
 	rm *.o
+	rm test
 	rm client
 	rm server
 	rm generate_keys
