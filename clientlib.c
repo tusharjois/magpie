@@ -8,35 +8,49 @@
 int create_handshake_xx_1(struct magpie_packet* packet, struct magpie_context* context) {
     // Create and send first packet
     int ret = hydro_kx_xx_1(&context->hydro_state, context->handshake_xx_1, NULL);
+    if (ret < 0)
+        return HC_LIBHYDROGEN_ERROR;
 
     packet->sender_id = context->local_ip;
     packet->type = HANDSHAKE_XX_1;
     memcpy(packet->payload, context->handshake_xx_1, hydro_kx_XX_PACKET1BYTES);
-    return ret;
+    
+    return HC_ONE_TO_SEND;
 }
 
-int handle_handshake_xx_2(struct magpie_packet* packet, struct magpie_context* context) {
+int handle_handshake_xx_2(struct magpie_packet* out_packet, struct magpie_packet* in_packet, struct magpie_context* context) {
 
     //check that client is ready for xx2
     if (context->state != AWAITING_XX_2) {
         logger(DEBUG, "Incorrect context state");
-        return -1;
+        return HC_INCORRECT_CONTEXT_STATE;
     }
 
     logger(DEBUG, "Received handshake 2 from server");
     //process packet
     memcpy(context->handshake_xx_2, packet->payload, hydro_kx_XX_PACKET2BYTES);
     if (hydro_kx_xx_3(&context->hydro_state, &context->session_kp, context->handshake_xx_3, NULL, context->handshake_xx_2, NULL,
-                &context->local_kp) != 0) {
-        logger(WARN, "Failed to process server's second handshake packet");
-        return -3;
+                &context->local_kp) == 0) 
+        {
+        logger(DEBUG, "Sending packet 3 from client to server");
+
+        out_packet->sender_id = context->local_id;
+        out_packet->type = HANDSHAKE_XX_3;
+        memcpy(out_packet->payload, context->handshake_xx_3, hydro_kx_XX_PACKET3BYTES);
+        // Done! session_kp.tx is the key for sending data to the server,
+        // and session_kp.rx is the key for receiving data from the server.
+        context->state = READY;
+
+        return HC_MORE_TO_SEND; // We start sending immediately after sending XX_3
     } else {
-        return 0;
+        logger(WARN, "Failed to process server's second handshake packet");
+        return HC_LIBHYDROGEN_ERROR;
     }
 
-    return 0;
+    return HC_UNKNOWN_ERROR; 
 }
 
+/*
 int create_handshake_xx_3(struct magpie_packet* packet, struct magpie_context* context) {
 
     packet->sender_id = context->local_ip;
@@ -45,8 +59,9 @@ int create_handshake_xx_3(struct magpie_packet* packet, struct magpie_context* c
     // Done! session_kp.tx is the key for sending data to the server,
     // and session_kp.rx is the key for receiving data from the server.
 
-    return 0;
+    return HC_ONE_TO_SEND;
 }
+*/
 
 
 /*int client_handle_test_messages(struct magpie_packet* packet, struct magpie_context* context) {
@@ -117,7 +132,7 @@ int client_send_test_message(struct Packet* packet, struct magpie_context* conte
 */
 
 /* File Transfer: Create Request Packet to ask server for current contents of a specified file */
-int create_read_req(struct magpie_packet* packet, struct magpie_context* context) {
+int create_read_req(struct magpie_packet* out_packet, struct magpie_context* context) {
 
     struct magpie_read_request req;
     memset(&req, 0, sizeof(struct magpie_read_request));
@@ -127,35 +142,33 @@ int create_read_req(struct magpie_packet* packet, struct magpie_context* context
     memset(plaintext, 0, PLAINTEXT_SIZE);
     memcpy(plaintext, &req, sizeof(struct magpie_read_request));
 
-    //TODO: "serialize" plaintext packet
-
-    packet->sender_id = context->local_ip;
-    packet->type = READ_FILE;
+    out_packet->sender_id = context->local_id;
+    out_packet->type = READ_FILE;
     
-    encrypt_packet(plaintext, packet, context);
+    encrypt_packet(plaintext, out_packet, context);
 
     //done! packet is ready to send
 
-    return 0;
+    return HC_ONE_TO_SEND
 }
 
-int handle_read_response(struct magpie_packet* packet, struct magpie_context* context) {
-
+int handle_read_response(struct magpie_packet* out_packet, struct magpie_packet* in_packet, struct magpie_context* context {
+    logger(DEBUG, "Received a read file message");
+    
     char plaintext[PLAINTEXT_SIZE];
     struct magpie_read_response res;
 
     //check that client is ready for messages
     if (context->state != READY) {
-        return -1;
+        return HC_INCORRECT_CONTEXT_STATE;
     }
 
     //check that this is a read file message type
     if (packet->type != READ_FILE) {
-        return -2;
+        return HC_INCORRECT_PACKET_TYPE;
     }
 
-    int ret = decrypt_packet(plaintext, packet, context);
-
+    int ret = decrypt_packet(plaintext, in_packet, context);
     if (ret != 0) {
         //TODO: do something more productive than just return
         return -1;
@@ -175,7 +188,7 @@ int handle_read_response(struct magpie_packet* packet, struct magpie_context* co
         if (context->fd == NULL)
         {
             logger(WARN, "Can't open file: %s", context->filename);
-            return -4;
+            return HC_FOPEN_FAILED;
         }
     } else {
         //else, just continue because fd is already open so it is not a new file
@@ -191,10 +204,10 @@ int handle_read_response(struct magpie_packet* packet, struct magpie_context* co
         logger(DEBUG, "Last packet, closing the file");
         fclose(context->fd);
         context->fd = NULL;
-        return 1;
+        return HC_LAST_TO_SEND;
     } else {
         //send up packet asking server for the next part
-        create_read_req(packet, context);
+        create_read_req(out_packet, context);
         logger(DEBUG, "Done setting up next read request, ready to send");
     }
 
@@ -203,7 +216,7 @@ int handle_read_response(struct magpie_packet* packet, struct magpie_context* co
 }
 
 /* File Transfer: Create Request Packet to ask server to write to specified file */
-int create_write_req(struct magpie_packet* packet, struct magpie_context* context) {
+int create_write_req(struct magpie_packet* out_packet, struct magpie_context* context) {
 
     //first, send filename
     struct magpie_write_request req;
@@ -220,18 +233,18 @@ int create_write_req(struct magpie_packet* packet, struct magpie_context* contex
     memset(plaintext, 0, PLAINTEXT_SIZE);
     memcpy(plaintext, &req, sizeof(struct magpie_write_request));
 
-    packet->sender_id = context->local_ip;
-    packet->type = WRITE_FILE;
+    out_packet->sender_id = context->local_ip;
+    out_packet->type = WRITE_FILE;
 
     encrypt_packet(plaintext, packet, context);
 
     //done! packet is ready to send
 
-    return 0;
+    return HC_ONE_TO_SEND;
 }
 
 /* File Transfer: Create Request Packet to send data to server for a write request */
-int create_write_data(struct magpie_packet* packet, struct magpie_context* context) {
+int create_write_data(struct magpie_packet* out_packet, struct magpie_packet* in_packet, struct magpie_context* context) {
 
     struct magpie_write_request req;
     memset(&req, 0, sizeof(struct magpie_write_request));
@@ -244,7 +257,7 @@ int create_write_data(struct magpie_packet* packet, struct magpie_context* conte
         if (context->fd == NULL)
         {
             logger(WARN, "Can't open file: %s", context->filename);
-            return -4;
+            return HC_FOPEN_FAILED;
         }
     }  else {
         //else, just continue because fd and filename are already set up
@@ -255,6 +268,7 @@ int create_write_data(struct magpie_packet* packet, struct magpie_context* conte
     int i;
     req.is_last_packet = 0;
 
+    int ret = HC_ONE_TO_SEND;
     for(i = 0; i < WRITE_DATA_SIZE; i++) {
         char c = fgetc(context->fd);
         if (c != EOF) {
@@ -264,6 +278,7 @@ int create_write_data(struct magpie_packet* packet, struct magpie_context* conte
             req.is_last_packet = 1;
             fclose(context->fd);
             context->fd = NULL;
+            ret = HC_LAST_TO_SEND;
             break;
         }
     }
@@ -272,17 +287,65 @@ int create_write_data(struct magpie_packet* packet, struct magpie_context* conte
     logger(DEBUG, "Setting up the rest of the packet");
     char plaintext[PLAINTEXT_SIZE];
     //Set up the rest of the packet
-    packet->sender_id = context->local_ip;
-    packet->type = WRITE_FILE;
+    out_packet->sender_id = context->local_id;
+    out_packet->type = WRITE_FILE;
     memcpy(plaintext, &req, sizeof(struct magpie_write_request));
 
     logger(DEBUG, "Encrypting");
     //finally, encrypt it
-    encrypt_packet(plaintext, packet, context);
+    if (encrypt_packet(plaintext, out_packet, context) < 0)
+        ret = HC_ENCRYPTION_FAILED;
+    else 
+        //done, packet is ready to send
+        logger(DEBUG, "Done, ready to send");
+    
+    return ret;
 
-    logger(DEBUG, "Done, ready to send");
-    //done, packet is ready to send
-    return 0;
+}
 
+int magpie_client_handle_packet(struct magpie_packet* out_packet, struct magpie_packet* in_packet, struct magpie_context* context) {
+    //ignore packets from self (because of multicast)
+    if (in_packet && in_packet->sender_id == context->local_id) {
+        logger(DEBUG, "Received packet from self");
+        return HC_MESSAGE_FROM_SELF;
+    }
 
+    if (in_packet == NULL) {
+        if (context->state == AWAITING_BEGIN) {
+            logger(DEBUG, "Creating packet 1 from client to server");
+            return create_handshake_xx_1(out_packet, context); 
+        } 
+        if (context->state == READY) {
+            if (strcmp("r", context->operation) == 0)
+                return create_read_req(out_packet, context);
+            else if (strcmp("w", context->operation) == 0)
+                return create_write_req(out_packet, context);
+            else 
+                return HC_UNKNOWN_ERROR;
+        }
+        logger(ERROR, "processing empty packet?");
+        return HC_UNKNOWN_ERROR;  // Handle this later
+    }
+
+    //process by type
+    switch (in_packet->type) {
+        case HANDSHAKE_XX_2: {
+            return handle_handshake_xx_2(out_packet, in_packet, context);
+        }
+
+        case READ_FILE: {
+            return handle_read_response(out_packet, in_packet, context);
+        }
+
+        case WRITE_FILE: {
+            return create_write_data(out_packet, in_packet, context);
+        }
+
+        default: {
+            logger(DEBUG, "Undefined type %d", in_packet->type);
+            return HC_INCORRECT_PACKET_TYPE;
+        }
+    }
+    
+    return HC_UNKNOWN_ERROR;
 }
