@@ -14,7 +14,6 @@ int main(int argc, char *argv[])
 
     //"Client" sets up their context
     struct magpie_context client_context;
-    printf("Setting up context...\n");
     setup_context(&client_context, "keys/keypair0", false);
     struct magpie_packet packet_from_client;
     printf("Client context loaded...\n");
@@ -68,12 +67,12 @@ int main(int argc, char *argv[])
     // printf("Server buffer set to local buffer...\n");
 
     printf("Client sending to server\n");
-    int coutner = 0;
+    int counter = 0;
     int client_ret, server_ret;
     while (true) {
         client_ret = generate_packet(&client_context, &packet_from_client);
         server_ret = handle_packet(&server_context, &packet_from_client);
-        printf("Loop [ counter=%d ret1=%d ret2=%d ]\n", coutner++, client_ret, server_ret);
+        printf("Loop [ counter=%d ret1=%d ret2=%d ]\n", counter++, client_ret, server_ret);
         if (server_ret == HC_TRANSFER_COMPELTE)
             break;   
         usleep(10000);

@@ -3,6 +3,7 @@
 #include "time.h"
 #include "helper.h"
 #include "keys.h"
+#include "stdio.h"
 
 //"frontend" functions
 
@@ -17,6 +18,15 @@ int setup_context(struct magpie_context* context, char* key_filepath, int is_ser
     if (hydro_init() != 0)
     {
         logger(FATAL, "LibHydrogen failed to initialize. Aborting :(");
+        exit(1);
+    }
+
+    //make sure key_filepath exists
+    FILE *file;
+    if ((file = fopen(key_filepath, "r"))) {
+        fclose(file); 
+    } else {
+        logger(FATAL, "Incorrect or nonexistent key_filepath: %s - Aborting :(", key_filepath);
         exit(1);
     }
 
