@@ -39,6 +39,15 @@ CLIENT:
     secret: {174, 220, 123, 182, 231, 141, 11, 204, 183, 152, 237, 53, 163, 109, 9, 123, 209, 161, 183, 239, 249, 243, 132, 82, 177, 48, 29, 46, 223, 11, 251, 42}
 */
 
+int load_hydro_kx_keypair(hydro_kx_keypair* kp, char* filepath) {
+    FILE* fd;
+    fd = fopen(filepath, "r");
+
+    fread(kp->pk, hydro_kx_PUBLICKEYBYTES, sizeof(char), fd);
+    fread(kp->sk, hydro_kx_SECRETKEYBYTES, sizeof(char), fd);
+    fclose(fd);
+    return 0;
+}
 
 void load_local_kp(char* filepath, hydro_kx_keypair* kp) {
     //load the keypair from a file located at filepath 
