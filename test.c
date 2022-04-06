@@ -11,17 +11,19 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+    //"Client" sets up their context
     struct magpie_context client_context;
     setup_context(&client_context, "keys/keypair_0", false);
     struct magpie_packet packet_from_client;
     printf("Client context loaded...\n");
 
+    // "Server" sets up their context
     struct magpie_context server_context;
     setup_context(&server_context, "keys/keypair_1", true);
     struct magpie_packet packet_from_server;
     printf("Server context loaded...\n");
 
-    // XX_1
+    // XX_1 
     generate_packet(&client_context, &packet_from_client);
     handle_packet(&server_context, &packet_from_client);
     printf("XX 1 Complete...\n");
