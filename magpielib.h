@@ -21,10 +21,6 @@ int handle_packet(struct magpie_context* context, struct magpie_packet* packet);
 
 int set_buffer(struct magpie_buffer* mag_buffer, void* buffer, int buffer_len);
 
-int read_from_mag_buffer(char* out_buffer, struct magpie_buffer* in_mag_buffer, int num_bytes);
-
-int write_to_mag_buffer(struct magpie_buffer* out_mag_buffer, char* in_buffer, int num_bytes);
-
 int generate_handshake_xx_1(struct magpie_context* context, struct magpie_packet* packet);
 
 int handle_handshake_xx_1(struct magpie_context* context, struct magpie_packet* packet);

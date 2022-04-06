@@ -168,47 +168,6 @@ int set_buffer(struct magpie_buffer* mag_buffer, void* buffer, int buffer_len) {
     return 0;
 }
 
-int read_from_mag_buffer(char* out_buffer, struct magpie_buffer* in_mag_buffer, int num_bytes) {
-    if (num_bytes <= 0)
-        return 0;
-
-    int n = 0;
-    if (in_mag_buffer->is_io_buffer) {
-        char c;
-        while ((c = fgetc(in_mag_buffer->io_buffer)) != EOF) {
-            out_buffer[n++] = c;
-            if (n >= num_bytes)
-                break;
-        }
-        if (c == EOF)
-            in_mag_buffer->is_empty = 1;
-    } else {
-        if (in_mag_buffer->buffer_len - in_mag_buffer->num_bytes_read < num_bytes)
-            n = in_mag_buffer->buffer_len - in_mag_buffer->num_bytes_read;
-        else
-            n = num_bytes;
-        memcpy(out_buffer, &in_mag_buffer->char_buffer[in_mag_buffer->num_bytes_read], n);
-        in_mag_buffer->num_bytes_read += n;
-        if (in_mag_buffer->buffer_len == in_mag_buffer->num_bytes_read)
-            in_mag_buffer->is_empty = 1;
-    }
-    return n;
-}
-
-int write_to_mag_buffer(struct magpie_buffer* out_mag_buffer, char* in_buffer, int num_bytes) {
-    if (num_bytes <= 0)
-        return 0;
-
-    if (out_mag_buffer->is_io_buffer) {
-        for(int i = 0; i < num_bytes; i++)
-            fputc(in_buffer[i], out_mag_buffer->io_buffer);
-    } else {
-        memcpy(&out_mag_buffer->char_buffer[out_mag_buffer->num_bytes_read], in_buffer, num_bytes);
-        out_mag_buffer->num_bytes_read += num_bytes;
-    }
-    return num_bytes;
-}
-
 int generate_handshake_xx_1(struct magpie_context* context, struct magpie_packet* packet) {
     if (context->state != AWAITING_BEGIN)
         return HC_INCORRECT_CONTEXT_STATE;
@@ -339,9 +298,11 @@ int encrypt_packet(struct magpie_message* plaintext_message, struct magpie_packe
 
     encrypted_packet->meta.sender_id = context->local_id;
     encrypted_packet->meta.seq_num = context->tx_seq_num + 1;
-    // printf("is_server=%d tx_num=%d rx_num=%d\n", context->is_server, context->tx_seq_num, context->rx_seq_num);
+    
+    //create the meta hash
     plaintext_message->meta_hash = hash((char*) &encrypted_packet->meta, sizeof(struct magpie_meta));
 
+    //encrypt
     memcpy(plaintext, plaintext_message, sizeof(struct magpie_message));
     hydro_secretbox_encrypt((uint8_t *)ciphertext, plaintext, PLAINTEXT_SIZE, 0, CONTEXT, context->session_kp.tx);
     memcpy(encrypted_packet->ciphertext, ciphertext, CIPHERTEXT_SIZE);
@@ -360,7 +321,6 @@ int encrypt_packet(struct magpie_message* plaintext_message, struct magpie_packe
 
 int decrypt_packet(struct magpie_message* plaintext_message, struct magpie_packet* encrypted_packet, struct magpie_context* context) {
     char* ciphertext = encrypted_packet->ciphertext;
-    // printf("is_server=%d tx_num=%d rx_num=%d\n", context->is_server, context->tx_seq_num, context->rx_seq_num);
 
     //check for correct order (Cannot decrypt out of order packets. Also, you cannot decrypt the same packet multiple times)
     if (encrypted_packet->meta.seq_num != context->rx_seq_num + 1) {
@@ -378,13 +338,20 @@ int decrypt_packet(struct magpie_message* plaintext_message, struct magpie_packe
     //decrypt packet
     char* plaintext = calloc(PLAINTEXT_SIZE, sizeof(char));
     if (hydro_secretbox_decrypt(plaintext, (uint8_t *)ciphertext, CIPHERTEXT_SIZE, 0, CONTEXT, context->session_kp.rx) != 0) {
-        logger(DEBUG, "Message forged!");
+        logger(DEBUG, "Decrypt failed, Message forged!");
         free(plaintext);
         return HC_DECRYPTION_MESSAGE_FORGED;
     } 
 
-    context->rx_seq_num++;
+    //verify meta hash
+    unsigned int meta_rehash = hash((char*) &encrypted_packet->meta, sizeof(struct magpie_meta));
+    if (((struct magpie_message*)plaintext)->meta_hash != meta_rehash) {
+        logger(DEBUG, "Meta hash mismatch, Message forged!");
+        free(plaintext);
+        return HC_DECRYPTION_HASH_FORGED;
+    }
 
+    context->rx_seq_num++;
     memcpy(plaintext_message, plaintext, sizeof(struct magpie_message));
     free(plaintext);
     return HC_OKAY;
