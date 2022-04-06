@@ -4,6 +4,8 @@
 #include "helper.h"
 #include "keys.h"
 
+//"frontend" functions
+
 int setup_context(struct magpie_context* context, char* key_filepath, int is_server) {
     //everything null to start
     memset(context, 0, sizeof(struct magpie_context));
@@ -43,7 +45,7 @@ int setup_context(struct magpie_context* context, char* key_filepath, int is_ser
 void reset_context(struct magpie_context* context) {   
     //TODO: update or delete 
 
-    
+
     //if (context->fd) {
         //fclose(context->fd);
         //context->fd = NULL;
@@ -79,15 +81,75 @@ void reset_context(struct magpie_context* context) {
     logger(INFO, "Server ready to serve another client...");
 }
 
-int load_hydro_kx_keypair(hydro_kx_keypair* kp, char* filepath) {
-    FILE* fd;
-    fd = fopen(filepath, "r");
-
-    fread(kp->pk, hydro_kx_PUBLICKEYBYTES, sizeof(char), fd);
-    fread(kp->sk, hydro_kx_SECRETKEYBYTES, sizeof(char), fd);
-    fclose(fd);
+int set_input_buffer(struct magpie_context* context, void* buffer, int buffer_len) {
+    set_buffer(&context->send_buffer, buffer, buffer_len);
     return 0;
 }
+
+int set_output_buffer(struct magpie_context* context, void* buffer, int buffer_len) {
+    set_buffer(&context->recv_buffer, buffer, buffer_len);
+    return 0;
+}
+
+int generate_packet(struct magpie_context* context, struct magpie_packet* packet) {
+    logger(DEBUG, "generate_packet() [ state=%d is_server=%d tx=%d rx=%d ]", context->state, context->is_server, context->tx_seq_num, context->rx_seq_num);
+
+    if (context->state == AWAITING_BEGIN)
+        return generate_handshake_xx_1(context, packet);
+    if (context->state == AWAITING_XX_1)
+        return generate_handshake_xx_2(context, packet);
+    if (context->state == AWAITING_XX_2)
+        return generate_handshake_xx_3(context, packet);
+    if (context->state == AWAITING_XX_3)
+        return HC_OKAY;
+
+    if (context->send_buffer.is_empty)
+        return HC_TRANSFER_COMPELTE;
+
+    struct magpie_message message;
+    message.num_bytes = read_from_mag_buffer(message.payload, &context->send_buffer, PAYLOAD_SIZE);
+    // printf("bytes=%d\n", message.num_bytes);
+    message.type = TRANSFER;
+    message.is_last_packet = context->send_buffer.is_empty;
+    if (encrypt_packet(&message, packet, context) < 0)
+        return HC_ENCRYPTION_FAILED;
+    
+    //if (message.is_last_packet)
+    //    return HC_LAST_TO_SEND;
+    //else 
+    return HC_ONE_TO_SEND;
+}
+
+int handle_packet(struct magpie_context* context, struct magpie_packet* packet) {
+    logger(DEBUG, "handle_packet() [ state=%d is_server=%d tx=%d rx=%d ]", context->state, context->is_server, context->tx_seq_num, context->rx_seq_num);
+
+    if (packet->meta.sender_id != context->local_id) {
+        logger(DEBUG, "ignoring packet fro ourselves");
+        return HC_OKAY;
+    }
+
+    if (context->state == AWAITING_BEGIN)
+        return HC_OKAY;
+    if (context->state == AWAITING_XX_1)
+        return handle_handshake_xx_1(context, packet);
+    if (context->state == AWAITING_XX_2)
+        return handle_handshake_xx_2(context, packet);
+    if (context->state == AWAITING_XX_3)
+        return handle_handshake_xx_3(context, packet);
+    
+    struct magpie_message message;
+    if (decrypt_packet(&message, packet, context) < 0)
+        return HC_ENCRYPTION_FAILED;
+    write_to_mag_buffer(&context->recv_buffer, message.payload, message.num_bytes);
+    //printf("%d %d %d\n", message.num_bytes, message.is_last_packet, message.type);
+
+    if (message.is_last_packet)
+        return HC_TRANSFER_COMPELTE;
+    else 
+        return HC_OKAY;
+}
+
+//"backend" functions
 
 int set_buffer(struct magpie_buffer* mag_buffer, void* buffer, int buffer_len) {
     memset(mag_buffer, 0, sizeof(struct magpie_buffer));
@@ -103,16 +165,6 @@ int set_buffer(struct magpie_buffer* mag_buffer, void* buffer, int buffer_len) {
         //memcpy(mag_buffer->char_buffer, buffer, buffer_len);
     }
 
-    return 0;
-}
-
-int set_input_buffer(struct magpie_context* context, void* buffer, int buffer_len) {
-    set_buffer(&context->send_buffer, buffer, buffer_len);
-    return 0;
-}
-
-int set_output_buffer(struct magpie_context* context, void* buffer, int buffer_len) {
-    set_buffer(&context->recv_buffer, buffer, buffer_len);
     return 0;
 }
 
@@ -306,7 +358,6 @@ int encrypt_packet(struct magpie_message* plaintext_message, struct magpie_packe
     return HC_OKAY;
 } 
 
-/* decrypt the packet after receiving, include probe checking */
 int decrypt_packet(struct magpie_message* plaintext_message, struct magpie_packet* encrypted_packet, struct magpie_context* context) {
     char* ciphertext = encrypted_packet->ciphertext;
     // printf("is_server=%d tx_num=%d rx_num=%d\n", context->is_server, context->tx_seq_num, context->rx_seq_num);
@@ -338,62 +389,4 @@ int decrypt_packet(struct magpie_message* plaintext_message, struct magpie_packe
     free(plaintext);
     return HC_OKAY;
 
-}
-
-int generate_packet(struct magpie_context* context, struct magpie_packet* packet) {
-    logger(DEBUG, "generate_packet() [ state=%d is_server=%d tx=%d rx=%d ]", context->state, context->is_server, context->tx_seq_num, context->rx_seq_num);
-
-    if (context->state == AWAITING_BEGIN)
-        return generate_handshake_xx_1(context, packet);
-    if (context->state == AWAITING_XX_1)
-        return generate_handshake_xx_2(context, packet);
-    if (context->state == AWAITING_XX_2)
-        return generate_handshake_xx_3(context, packet);
-    if (context->state == AWAITING_XX_3)
-        return HC_OKAY;
-
-    if (context->send_buffer.is_empty)
-        return HC_TRANSFER_COMPELTE;
-
-    struct magpie_message message;
-    message.num_bytes = read_from_mag_buffer(message.payload, &context->send_buffer, PAYLOAD_SIZE);
-    // printf("bytes=%d\n", message.num_bytes);
-    message.type = TRANSFER;
-    message.is_last_packet = context->send_buffer.is_empty;
-    if (encrypt_packet(&message, packet, context) < 0)
-        return HC_ENCRYPTION_FAILED;
-    
-    //if (message.is_last_packet)
-    //    return HC_LAST_TO_SEND;
-    //else 
-    return HC_ONE_TO_SEND;
-}
-
-int handle_packet(struct magpie_context* context, struct magpie_packet* packet) {
-    logger(DEBUG, "handle_packet() [ state=%d is_server=%d tx=%d rx=%d ]", context->state, context->is_server, context->tx_seq_num, context->rx_seq_num);
-
-    if (packet->meta.sender_id != context->local_id) {
-        logger(DEBUG, "ignoring packet fro ourselves");
-        return HC_OKAY;
-    }
-
-    if (context->state == AWAITING_BEGIN)
-        return HC_OKAY;
-    if (context->state == AWAITING_XX_1)
-        return handle_handshake_xx_1(context, packet);
-    if (context->state == AWAITING_XX_2)
-        return handle_handshake_xx_2(context, packet);
-    if (context->state == AWAITING_XX_3)
-        return handle_handshake_xx_3(context, packet);
-    
-    struct magpie_message message;
-    if (decrypt_packet(&message, packet, context) < 0)
-        return HC_ENCRYPTION_FAILED;
-    write_to_mag_buffer(&context->recv_buffer, message.payload, message.num_bytes);
-    //printf("%d %d %d\n", message.num_bytes, message.is_last_packet, message.type);
-
-    if (message.is_last_packet)
-        return HC_TRANSFER_COMPELTE;
-    else 
-        return HC_OKAY;
 }
