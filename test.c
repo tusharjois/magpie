@@ -4,6 +4,7 @@
 
 int main(int argc, char *argv[])
 {
+    printf("Beginning test...\n");
 
     if (argc != 1)
     {

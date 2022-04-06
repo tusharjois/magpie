@@ -15,4 +15,6 @@ void get_my_ip_address(int* myAddress);
 
 void format_ip_address(char* buffer, int ip);
 
+int receive(int sk, char* mess);
+
 #endif

@@ -29,7 +29,7 @@ int generate_handshake_xx_2(struct magpie_context* context, struct magpie_packet
 
 int handle_handshake_xx_2(struct magpie_context* context, struct magpie_packet* packet);
 
-int generate_handshake_xx_2(struct magpie_context* context, struct magpie_packet* packet);
+int generate_handshake_xx_3(struct magpie_context* context, struct magpie_packet* packet);
 
 int handle_handshake_xx_3(struct magpie_context* context, struct magpie_packet* packet);
 

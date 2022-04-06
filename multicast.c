@@ -99,6 +99,34 @@ int recv_mc_msg(char* mess_buff, int* mess_len, struct sockaddr_in* src_addr, st
     }
 }
 
+int receive(int sk, char* mess) {
+    socklen_t dummy_len;
+    struct sockaddr_in src_addr;
+    fd_set mask;
+    struct timeval timeout;
+
+    FD_ZERO(&mask);
+    FD_SET(sk, &mask);
+    timeout.tv_sec = 2;
+    timeout.tv_usec = 0;
+
+    int num = select(FD_SETSIZE, &mask, NULL, NULL, &timeout);
+    if (num > 0)
+    {
+        //we've received a packet
+        if (FD_ISSET(sk, &mask))
+        {
+            int mess_len = recvfrom(sk, mess, MESS_BUFF_LEN, 0, (struct sockaddr *)&src_addr, &dummy_len);
+            usleep(10000);  // TODO, fixme, this is currently a hack
+            //logger(DEBUG, "Received %dB message. Digest: %u", mess_len, hash(mess, mess_len));
+            logger(DEBUG, "Received %dB message", mess_len);
+            return mess_len;
+        }
+    }
+    
+    return 0;
+}
+
 int send_mc_msg(char* msg_buff, int msg_len, struct magpie_context* context) {
     logger(DEBUG, "sending multicast [ size=%dB digest=%u ]", msg_len, hash(msg_buff, msg_len));
     

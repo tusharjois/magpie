@@ -4,21 +4,6 @@
 
 /* Magpie helper functions */
 
-void format_keypair(char* buffer, hydro_kx_keypair* kp) {
-    memset(buffer, '\0', strlen(buffer));
-    sprintf(&buffer[strlen(buffer)], "public = {");
-    for (int i=0; i < hydro_kx_PUBLICKEYBYTES; i++) {
-      sprintf(&buffer[strlen(buffer)], "%d, ", kp->pk[i]);
-    }
-    sprintf(&buffer[strlen(buffer)], "}");
-    sprintf(&buffer[strlen(buffer)], "\nprivate = ");
-    sprintf(&buffer[strlen(buffer)], "{");
-    for (int i=0; i < hydro_kx_SECRETKEYBYTES; i++) {
-      sprintf(&buffer[strlen(buffer)], "%d, ", kp->sk[i]);
-    }
-    sprintf(&buffer[strlen(buffer)], "}");
-}
-
 double timediff(struct timeval* start, struct timeval* end) {
     return (end->tv_sec + 0.000001 * end->tv_usec) - (start->tv_sec + 0.000001 * start->tv_usec);
 }
