@@ -14,13 +14,14 @@ int main(int argc, char *argv[])
 
     //"Client" sets up their context
     struct magpie_context client_context;
-    setup_context(&client_context, "keys/keypair_0", false);
+    printf("Setting up context...\n");
+    setup_context(&client_context, "keys/keypair0", false);
     struct magpie_packet packet_from_client;
     printf("Client context loaded...\n");
 
     // "Server" sets up their context
     struct magpie_context server_context;
-    setup_context(&server_context, "keys/keypair_1", true);
+    setup_context(&server_context, "keys/keypair1", true);
     struct magpie_packet packet_from_server;
     printf("Server context loaded...\n");
 
