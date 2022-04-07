@@ -53,45 +53,6 @@ int setup_context(struct magpie_context* context, char* key_filepath, int is_ser
     return 0;
 }
 
-void reset_context(struct magpie_context* context) {   
-    //TODO: update or delete 
-
-
-    //if (context->fd) {
-        //fclose(context->fd);
-        //context->fd = NULL;
-    //}
-
-    // Re-initialize LibHydrogen
-    if (hydro_init() != 0)
-    {
-        logger(FATAL, "LibHydrogen failed to initialize. Aborting :(");
-        exit(1);
-    }
-
-    struct timeval now;
-    gettimeofday(&now, NULL);
-    double time_elapsed = timediff(&context->operation_start, &now);
-    logger(INFO, "Operation Complete [ data=%dB latency=%.3fms throughput=%.3fkbps ]", 
-        context->bytes_transferred, time_elapsed * 1000, context->bytes_transferred / (time_elapsed * 1000));
-    
-    struct magpie_context new_context;
-    memset(&new_context, 0, sizeof(struct magpie_context));
-    //new_context.sk = context->sk;
-    new_context.local_id = context->local_id;
-    //memcpy(&new_context.remote_addr, &context->remote_addr, sizeof(struct sockaddr_in));
-    memcpy(&new_context.local_kp, &context->local_kp, sizeof(hydro_kx_keypair));
-    new_context.is_server = context->is_server;
-    new_context.state = new_context.is_server ? AWAITING_XX_1 : AWAITING_BEGIN;
-    //new_context.timeout.tv_sec = new_context.is_server ? 15 : 1;
-
-    context->rx_seq_num = context->tx_seq_num = START_SEQ_NUM - 1;
-
-    memcpy(context, &new_context, sizeof(struct magpie_context));
-
-    logger(INFO, "Server ready to serve another client...");
-}
-
 int set_input_buffer(struct magpie_context* context, void* buffer, int buffer_len) {
     set_buffer(&context->send_buffer, buffer, buffer_len);
     return 0;
