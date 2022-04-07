@@ -7,12 +7,13 @@
 
 //"frontend" functions
 
-int setup_context(struct magpie_context* context, char* key_filepath, int is_server) {
+int setup_context(struct magpie_context* context, char* key_filepath, int is_server, char* logger_level) {
     //everything null to start
     memset(context, 0, sizeof(struct magpie_context));
 
     // Initialize logger
-    logger_init(TRACE, false);
+    int level = get_logger_level(logger_level);
+    logger_init(level, false);
 
     // Initialize LibHydrogen
     if (hydro_init() != 0)

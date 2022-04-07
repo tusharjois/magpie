@@ -6,21 +6,23 @@ int main(int argc, char *argv[])
 {
     printf("Beginning test...\n");
 
-    if (argc != 1)
+    if (argc != 2)
     {
-        logger(FATAL, "usage: ./test");
+        logger(FATAL, "usage: ./test <logger level>");
         exit(1);
     }
 
+    char* logger_level = argv[1];
+
     //"Client" sets up their context
     struct magpie_context client_context;
-    setup_context(&client_context, "keys/keypair0", false);
+    setup_context(&client_context, "keys/keypair0", false, logger_level);
     struct magpie_packet packet_from_client;
     printf("Client context loaded...\n");
 
     // "Server" sets up their context
     struct magpie_context server_context;
-    setup_context(&server_context, "keys/keypair1", true);
+    setup_context(&server_context, "keys/keypair1", true, logger_level);
     struct magpie_packet packet_from_server;
     printf("Server context loaded...\n");
 
@@ -72,7 +74,7 @@ int main(int argc, char *argv[])
     while (true) {
         client_ret = generate_packet(&client_context, &packet_from_client);
         server_ret = handle_packet(&server_context, &packet_from_client);
-        printf("Loop [ counter=%d ret1=%d ret2=%d ]\n", counter++, client_ret, server_ret);
+        logger(DEBUG, "Loop [ counter=%d ret1=%d ret2=%d ]\n", counter++, client_ret, server_ret);
         if (server_ret == HC_TRANSFER_COMPELTE)
             break;   
         usleep(10000);

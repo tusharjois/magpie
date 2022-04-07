@@ -5,7 +5,7 @@
 
 //"frontend" functions
 
-int setup_context(struct magpie_context* context, char* key_filepath, int is_server);
+int setup_context(struct magpie_context* context, char* key_filepath, int is_server, char* logger_level);
 
 void reset_context(struct magpie_context* context);
 
