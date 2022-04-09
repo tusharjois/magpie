@@ -61,7 +61,7 @@ int write_to_mag_buffer(struct magpie_buffer* out_mag_buffer, char* in_buffer, i
     return num_bytes;
 }
 
-/* not for security purposes ;) dbj2 hash */
+/* dbj2 hash */
 unsigned int hash(char *str, int len) {
     unsigned int hash = 5381;
     int c;

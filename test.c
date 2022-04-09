@@ -16,50 +16,50 @@ int main(int argc, char *argv[])
 
     //"Client" sets up their context
     struct magpie_context client_context;
-    setup_context(&client_context, "keys/keypair0", false, logger_level);
+    magpie_setup_context(&client_context, "keys/keypair0", false, logger_level);
     struct magpie_packet packet_from_client;
     printf("Client context loaded...\n");
 
     // "Server" sets up their context
     struct magpie_context server_context;
-    setup_context(&server_context, "keys/keypair1", true, logger_level);
+    magpie_setup_context(&server_context, "keys/keypair1", true, logger_level);
     struct magpie_packet packet_from_server;
     printf("Server context loaded...\n");
 
     // XX_1 
-    generate_packet(&client_context, &packet_from_client);
-    handle_packet(&server_context, &packet_from_client);
+    magpie_generate_packet(&client_context, &packet_from_client);
+    magpie_handle_packet(&server_context, &packet_from_client);
     printf("XX 1 Complete...\n");
 
     // XX_2
-    generate_packet(&server_context, &packet_from_server);
-    handle_packet(&client_context, &packet_from_server);
+    magpie_generate_packet(&server_context, &packet_from_server);
+    magpie_handle_packet(&client_context, &packet_from_server);
     printf("XX 2 Complete...\n");
 
     // XX_3
-    generate_packet(&client_context, &packet_from_client);
-    handle_packet(&server_context, &packet_from_client);
+    magpie_generate_packet(&client_context, &packet_from_client);
+    magpie_handle_packet(&server_context, &packet_from_client);
     printf("XX 3 Complete...\n");
 
     FILE* client_in = fopen("client_input.txt", "r");
-    set_input_buffer(&client_context, client_in, 0);
+    magpie_set_input_buffer(&client_context, client_in, 0);
     printf("Client input set to file \"client_input.txt\"...\n");
 
     // Example code to read from local buffer instead of file buffer
     // char* out = "Hello World :)\n";
-    // set_input_buffer(&client_context, out, strlen(out));
+    // magpie_set_input_buffer(&client_context, out, strlen(out));
     // printf("Client buffer set to local buffer...\n");
 
-    //FILE* client_out = fopen("client_output.txt", "w");
-    //set_output_buffer(&client_context, client_out, 0);
-    //printf("Client output set to file \"client_output.txt\"...\n");
+    // FILE* client_out = fopen("client_output.txt", "w");
+    // magpie_set_output_buffer(&client_context, client_out, 0);
+    // printf("Client output set to file \"client_output.txt\"...\n");
 
-    //FILE* server_in = fopen("server_in.txt", "r");
-    //set_input_buffer(&server_context, server_in, 0);
-    //printf("Server output set to file \"server_in.txt\"...\n");
+    // FILE* server_in = fopen("server_in.txt", "r");
+    // magpie_set_input_buffer(&server_context, server_in, 0);
+    // printf("Server output set to file \"server_in.txt\"...\n");
 
     FILE* server_out = fopen("server_output.txt", "w");
-    set_output_buffer(&server_context, server_out, 0);
+    magpie_set_output_buffer(&server_context, server_out, 0);
     printf("Server output set to file \"server_output.txt\"...\n");
 
     // Example code to save to local buffer instead of file buffer
@@ -72,8 +72,8 @@ int main(int argc, char *argv[])
     int counter = 0;
     int client_ret, server_ret;
     while (true) {
-        client_ret = generate_packet(&client_context, &packet_from_client);
-        server_ret = handle_packet(&server_context, &packet_from_client);
+        client_ret = magpie_generate_packet(&client_context, &packet_from_client);
+        server_ret = magpie_handle_packet(&server_context, &packet_from_client);
         logger(DEBUG, "Loop [ counter=%d ret1=%d ret2=%d ]\n", counter++, client_ret, server_ret);
         if (server_ret == HC_TRANSFER_COMPELTE)
             break;   
@@ -83,8 +83,8 @@ int main(int argc, char *argv[])
     //printf("Server sending to client\n");
     //coutner = 0;
     //while (true) {
-    //    server_ret = generate_packet(&server_context, &packet_from_server);
-    //    client_ret = handle_packet(&client_context, &packet_from_server);
+    //    server_ret = magpie_generate_packet(&server_context, &packet_from_server);
+    //    client_ret = magpie_handle_packet(&client_context, &packet_from_server);
     //    printf("Loop [ counter=%d ret1=%d ret2=%d ]\n", coutner++, client_ret, server_ret);
     //    if (client_ret == HC_TRANSFER_COMPELTE)
     //        break;   

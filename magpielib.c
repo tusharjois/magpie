@@ -1,13 +1,15 @@
-#include "magpielib.h"
-#include "logger.h"
+
+//#include "logger.h"
 #include "time.h"
+#include "stdio.h"
+
+#include "magpielib.h"
 #include "helper.h"
 #include "keys.h"
-#include "stdio.h"
 
 //"frontend" functions
 
-int setup_context(struct magpie_context* context, char* key_filepath, int is_server, char* logger_level) {
+int magpie_setup_context(struct magpie_context* context, char* key_filepath, int is_server, char* logger_level) {
     //everything null to start
     memset(context, 0, sizeof(struct magpie_context));
 
@@ -53,17 +55,17 @@ int setup_context(struct magpie_context* context, char* key_filepath, int is_ser
     return 0;
 }
 
-int set_input_buffer(struct magpie_context* context, void* buffer, int buffer_len) {
+int magpie_set_input_buffer(struct magpie_context* context, void* buffer, int buffer_len) {
     set_buffer(&context->send_buffer, buffer, buffer_len);
     return 0;
 }
 
-int set_output_buffer(struct magpie_context* context, void* buffer, int buffer_len) {
+int magpie_set_output_buffer(struct magpie_context* context, void* buffer, int buffer_len) {
     set_buffer(&context->recv_buffer, buffer, buffer_len);
     return 0;
 }
 
-int generate_packet(struct magpie_context* context, struct magpie_packet* packet) {
+int magpie_generate_packet(struct magpie_context* context, struct magpie_packet* packet) {
     logger(DEBUG, "generate_packet() [ state=%d is_server=%d tx=%d rx=%d ]", context->state, context->is_server, context->tx_seq_num, context->rx_seq_num);
 
     if (context->state == AWAITING_BEGIN)
@@ -92,7 +94,7 @@ int generate_packet(struct magpie_context* context, struct magpie_packet* packet
     return HC_ONE_TO_SEND;
 }
 
-int handle_packet(struct magpie_context* context, struct magpie_packet* packet) {
+int magpie_handle_packet(struct magpie_context* context, struct magpie_packet* packet) {
     logger(DEBUG, "handle_packet() [ state=%d is_server=%d tx=%d rx=%d ]", context->state, context->is_server, context->tx_seq_num, context->rx_seq_num);
 
     if (packet->meta.sender_id != context->local_id) {

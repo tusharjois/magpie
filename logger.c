@@ -37,7 +37,7 @@ void logger_init(int level, int force_flush) {
     FORCE_FLUSH = force_flush;
 }
 
-/* Decorate output string to be printed*/
+/* Decorate output string to be printed */
 void set_formatter(char* buffer, const char* fmt, int level) {
     if (level == ALL) {
         sprintf(buffer, "\rALL: %s\n", fmt);
@@ -60,8 +60,7 @@ void set_formatter(char* buffer, const char* fmt, int level) {
     }
 }
 
-/* Log string at a given logging level.
-*/
+/* Log string at a given logging level. */
 void logger(int level, const char* fmt, ...) {
     // Collect printf arguments
     va_list args;

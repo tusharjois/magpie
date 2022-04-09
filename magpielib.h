@@ -5,15 +5,15 @@
 
 //"frontend" functions
 
-int setup_context(struct magpie_context* context, char* key_filepath, int is_server, char* logger_level);
+int magpie_setup_context(struct magpie_context* context, char* key_filepath, int is_server, char* logger_level);
 
-int set_input_buffer(struct magpie_context* context, void* buffer, int buffer_len);
+int magpie_set_input_buffer(struct magpie_context* context, void* buffer, int buffer_len);
 
-int set_output_buffer(struct magpie_context* context, void* buffer, int buffer_len);
+int magpie_set_output_buffer(struct magpie_context* context, void* buffer, int buffer_len);
 
-int generate_packet(struct magpie_context* context, struct magpie_packet* packet);
+int magpie_generate_packet(struct magpie_context* context, struct magpie_packet* packet);
 
-int handle_packet(struct magpie_context* context, struct magpie_packet* packet);
+int magpie_handle_packet(struct magpie_context* context, struct magpie_packet* packet);
 
 //"backend" functions
 
