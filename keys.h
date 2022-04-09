@@ -4,16 +4,9 @@
 #define keys_H
 
 #include <stdlib.h>
+#include "hydrogen.h"
 
 int load_hydro_kx_keypair(hydro_kx_keypair* kp, char* filepath);
-
-void load_server_kp(hydro_kx_keypair* server_static_kp);
-
-void load_client_kp(hydro_kx_keypair* client_static_kp);
-
-void load_server_pk(hydro_kx_keypair* server_static_kp);
-
-void load_client_pk(hydro_kx_keypair* client_static_kp);
 
 void format_keypair(char* buffer, hydro_kx_keypair* kp);
 
