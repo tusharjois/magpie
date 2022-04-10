@@ -132,10 +132,10 @@ int magpie_handle_packet(struct magpie_context* context, struct magpie_packet* p
     logger(TRACE, "%d %d %d\n", message.num_bytes, message.is_last_packet, message.type);
 
     logger(DEBUG, "finished handling");
-   // if (message.is_last_packet)
-      //  return HC_TRANSFER_COMPELTE;
-   // else 
-    return HC_OKAY;
+    if (message.is_last_packet)
+        return HC_TRANSFER_COMPELTE;
+    else 
+        return HC_OKAY;
 }
 
 //"backend" functions
