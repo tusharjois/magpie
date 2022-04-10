@@ -51,7 +51,7 @@ int magpie_setup_context(struct magpie_context* context, char* key_filepath, int
     context->state = context->is_server ? AWAITING_XX_1 : AWAITING_BEGIN;
     context->send_buffer.is_empty = 1;  // Default to empty send buffer
 
-    context->rx_seq_num = context->tx_seq_num = HANDSHAKE_XX_1_SEQ_NUM;
+    context->rx_seq_num = context->tx_seq_num = INIT_SEQ_NUM;
 
     return 0;
 }
@@ -82,8 +82,8 @@ int magpie_generate_packet(struct magpie_context* context, struct magpie_packet*
         return HC_OKAY;
 
     //If send buffer is empty, then nothing left to send
-    if (context->send_buffer.is_empty)
-        return HC_TRANSFER_COMPELTE;
+    //if (context->send_buffer.is_empty)
+        //return HC_TRANSFER_COMPELTE;
 
     //otherwise, generate a normal packet containing data from the send buffer
     struct magpie_message message;
@@ -95,6 +95,9 @@ int magpie_generate_packet(struct magpie_context* context, struct magpie_packet*
         logger(ERROR, "Packet failed to encrypt");
         return HC_ENCRYPTION_FAILED;
     }
+    if (context->send_buffer.is_empty)
+        return HC_TRANSFER_COMPELTE;
+
     return HC_ONE_TO_SEND;
 }
 
@@ -175,6 +178,7 @@ int generate_handshake_xx_1(struct magpie_context* context, struct magpie_packet
     packet->meta.seq_num = HANDSHAKE_XX_1_SEQ_NUM;
     memcpy(packet->ciphertext, context->handshake_xx_1, hydro_kx_XX_PACKET1BYTES);
     context->state = AWAITING_XX_2;
+    context->tx_seq_num++;
 
     return HC_ONE_TO_SEND;
 }
@@ -199,6 +203,7 @@ int handle_handshake_xx_1(struct magpie_context* context, struct magpie_packet* 
     logger(DEBUG, "creating second handshake");
     if (hydro_kx_xx_2(&context->hydro_state, context->handshake_xx_2, context->handshake_xx_1, NULL, &context->local_kp) == 0) {
         context->handshake_xx_1_done = 1;
+        context->rx_seq_num++;
         return HC_OKAY;
     } else {
         logger(WARN, "Failed to process client's first handshake packet");
@@ -216,6 +221,7 @@ int generate_handshake_xx_2(struct magpie_context* context, struct magpie_packet
     packet->meta.seq_num = HANDSHAKE_XX_2_SEQ_NUM;
     memcpy(packet->ciphertext, context->handshake_xx_2, hydro_kx_XX_PACKET2BYTES);
     context->state = AWAITING_XX_3;
+    context->tx_seq_num++;
     // Done! session_kp.tx is the key for sending data to the server,
     // and session_kp.rx is the key for receiving data from the server.
 
@@ -237,6 +243,7 @@ int handle_handshake_xx_2(struct magpie_context* context, struct magpie_packet* 
         NULL, context->handshake_xx_2, NULL, &context->local_kp) == 0
     ) {
         context->handshake_xx_2_done = 1;
+        context->rx_seq_num++;
         return HC_OKAY;
     } else {
         logger(WARN, "Failed to process server's second handshake packet");
@@ -257,6 +264,7 @@ int generate_handshake_xx_3(struct magpie_context* context, struct magpie_packet
     // Done! session_kp.tx is the key for sending data to the server,
     // and session_kp.rx is the key for receiving data from the server.
     context->state = READY;
+    context->tx_seq_num++;
 
     logger(INFO, "Ready to send communication data");
     return HC_MORE_TO_SEND; // We start sending immediately after sending XX_3
@@ -277,6 +285,8 @@ int handle_handshake_xx_3(struct magpie_context* context, struct magpie_packet* 
     if (hydro_kx_xx_4(&context->hydro_state, &context->session_kp, NULL, context->handshake_xx_3, NULL) == 0) {
         logger(INFO, "Ready to receive communication data");
         context->state = READY;
+        context->rx_seq_num++;
+        logger(DEBUG, "current server [ state=%d is_server=%d tx=%d rx=%d ]", context->state, context->is_server, context->tx_seq_num, context->rx_seq_num);
         return HC_OKAY;
         // Done! session_kp.tx is the key for sending data to the client,
         // and session_kp.rx is the key for receiving data from the client.

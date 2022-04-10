@@ -5,6 +5,7 @@
 #include "magpielib.h"
 
 int test_generate_time(struct magpie_context* client_context, char* filepath);
+int test_generate_and_handle_time(struct magpie_context* client_context, struct magpie_context* server_context, char* filepath);
 
 int main(int argc, char *argv[])
 {
@@ -17,54 +18,55 @@ int main(int argc, char *argv[])
     }
 
     char* logger_level = argv[1];
-
-    struct timeval tv_start;
-    struct timeval tv_end;
-
-    gettimeofday(&tv_start, NULL);
-    //"Client" sets up their context
     struct magpie_context client_context;
-    magpie_setup_context(&client_context, "keys/keypair0", false, logger_level);
-    struct magpie_packet packet_from_client;
-    gettimeofday(&tv_end, NULL);
-    //double context_time = timediff(&tv_start, &tv_end);
-    printf("Client context loaded...\n");
-
-    // "Server" sets up their context
     struct magpie_context server_context;
-    magpie_setup_context(&server_context, "keys/keypair1", true, logger_level);
-    struct magpie_packet packet_from_server;
-    printf("Server context loaded...\n");
+    setup_and_handshake(&server_context, &client_context, logger_level);
 
-    // XX_1 
-    printf("Starting handshake...\n");
-    gettimeofday(&tv_start, NULL);
-    magpie_generate_packet(&client_context, &packet_from_client);
-    magpie_handle_packet(&server_context, &packet_from_client);
-    //printf("XX 1 Complete...\n");
-
-    // XX_2
-    magpie_generate_packet(&server_context, &packet_from_server);
-    magpie_handle_packet(&client_context, &packet_from_server);
-    //printf("XX 2 Complete...\n");
-
-    // XX_3
-    magpie_generate_packet(&client_context, &packet_from_client);
-    magpie_handle_packet(&server_context, &packet_from_client);
-    //printf("XX 3 Complete...\n");
-    gettimeofday(&tv_end, NULL);
-    //double handshake_time = timediff(&tv_start, &tv_end);
-    printf("Handshake complete...\n");
+    printf("\n Testing both just generate\n");
 
     test_generate_time(&client_context, "test_1M.txt");
     test_generate_time(&client_context, "test_2M.txt");
     test_generate_time(&client_context, "test_3M.txt");
     test_generate_time(&client_context, "test_4M.txt");
 
+    printf("\n Testing both generate and handle\n");
+    printf("Reset contexts\n");
+    setup_and_handshake(&server_context, &client_context, logger_level);
+    
     test_generate_and_handle_time(&client_context, &server_context, "test_1M.txt");
     test_generate_and_handle_time(&client_context, &server_context, "test_2M.txt");
     test_generate_and_handle_time(&client_context, &server_context, "test_3M.txt");
     test_generate_and_handle_time(&client_context, &server_context, "test_4M.txt");
+    return 0;
+}
+
+int setup_and_handshake(struct magpie_context* server_context, struct magpie_context* client_context, char* logger_level) {
+
+    //"Client" sets up their context
+    magpie_setup_context(client_context, "keys/keypair0", false, logger_level);
+    struct magpie_packet packet_from_client;
+    printf("Client context loaded...\n");
+
+    // "Server" sets up their context
+    magpie_setup_context(server_context, "keys/keypair1", true, logger_level);
+    struct magpie_packet packet_from_server;
+    printf("Server context loaded...\n");
+
+    // XX_1 
+    printf("Starting handshake...\n");
+    magpie_generate_packet(client_context, &packet_from_client);
+    magpie_handle_packet(server_context, &packet_from_client);
+    printf("XX 1 Complete...\n");
+
+    // XX_2
+    magpie_generate_packet(server_context, &packet_from_server);
+    magpie_handle_packet(client_context, &packet_from_server);
+    printf("XX 2 Complete...\n");
+
+    // XX_3
+    magpie_generate_packet(client_context, &packet_from_client);
+    magpie_handle_packet(server_context, &packet_from_client);
+    printf("XX 3 Complete...\n");
 
     return 0;
 }
@@ -178,24 +180,22 @@ int test_generate_and_handle_time(struct magpie_context* client_context, struct 
     struct timeval tv_end;
 
     struct magpie_packet packet_from_client;
-    struct magpie_packet packet_from_server;
     
     FILE* client_in = fopen(filepath, "r");
     magpie_set_input_buffer(client_context, client_in, 0);
 
     FILE* server_out = fopen("server_output.txt", "w");
-    magpie_set_output_buffer(&server_context, server_out, 0);
+    magpie_set_output_buffer(server_context, server_out, 0);
 
     //start timer
     gettimeofday(&tv_start, NULL);
 
-    int counter = 0;
     int client_ret, server_ret;
     while (true) {
         client_ret = magpie_generate_packet(client_context, &packet_from_client);
-        server_ret = magpie_handle_packet(client_context, &packet_from_server);
+        server_ret = magpie_handle_packet(server_context, &packet_from_client);
         //printf("Loop [ counter=%d ret1=%d ]\n", coutner++, client_ret);
-        if (client_ret == HC_TRANSFER_COMPELTE) {
+        if (server_ret == HC_TRANSFER_COMPELTE) {
            break;
         }   
     }
