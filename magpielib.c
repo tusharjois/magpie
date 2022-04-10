@@ -1,5 +1,3 @@
-
-//#include "logger.h"
 #include "time.h"
 #include "stdio.h"
 
@@ -82,10 +80,6 @@ int magpie_generate_packet(struct magpie_context* context, struct magpie_packet*
     if (context->state == AWAITING_XX_3)
         return HC_OKAY;
 
-    //If send buffer is empty, then nothing left to send
-    //if (context->send_buffer.is_empty)
-        //return HC_TRANSFER_COMPELTE;
-
     //otherwise, generate a normal packet containing data from the send buffer
     struct magpie_message message;
     memset(&message, 0, sizeof(struct magpie_message));
@@ -154,10 +148,7 @@ int set_buffer(struct magpie_buffer* mag_buffer, void* buffer, int buffer_len) {
     if (mag_buffer->is_io_buffer)
         mag_buffer->io_buffer = (FILE*) buffer;
     else {
-        // deep copy data in case buffer is freed
         mag_buffer->char_buffer = (char*) buffer;
-        //mag_buffer->char_buffer = (char*) calloc(buffer_len, sizeof(char));
-        //memcpy(mag_buffer->char_buffer, buffer, buffer_len);
     }
 
     return 0;
@@ -225,8 +216,6 @@ int generate_handshake_xx_2(struct magpie_context* context, struct magpie_packet
     memcpy(packet->ciphertext, context->handshake_xx_2, hydro_kx_XX_PACKET2BYTES);
     context->state = AWAITING_XX_3;
     context->tx_seq_num++;
-    // Done! session_kp.tx is the key for sending data to the server,
-    // and session_kp.rx is the key for receiving data from the server.
 
     return HC_ONE_TO_SEND;
 }
