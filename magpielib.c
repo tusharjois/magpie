@@ -37,6 +37,7 @@ int magpie_setup_context(struct magpie_context* context, char* key_filepath, int
     // Setup local Diffie-Hellman keypair
     load_hydro_kx_keypair(&context->local_kp, key_filepath);
     char buffer[MAX_STRING_LEN];
+    memset(buffer, 0, MAX_STRING_LEN);
     format_keypair(buffer, &context->local_kp);
     logger(DEBUG, "%s keypair:\n%s", is_server ? "Server" : "Client", buffer);
 
@@ -87,6 +88,7 @@ int magpie_generate_packet(struct magpie_context* context, struct magpie_packet*
 
     //otherwise, generate a normal packet containing data from the send buffer
     struct magpie_message message;
+    memset(&message, 0, sizeof(struct magpie_message));
     message.num_bytes = read_from_mag_buffer(message.payload, &context->send_buffer, PAYLOAD_SIZE);
     logger(TRACE, "bytes=%d\n", message.num_bytes);
     message.type = TRANSFER;
@@ -126,6 +128,7 @@ int magpie_handle_packet(struct magpie_context* context, struct magpie_packet* p
     
     //otherwise, handle the normal packet and write the plaintext to the receive buffer
     struct magpie_message message;
+    memset(&message, 0, sizeof(struct magpie_message));
     if (decrypt_packet(&message, packet, context) < 0) {
         logger(ERROR, "Packet failed to decrypt");
         return HC_DECRYPTION_FAILED;

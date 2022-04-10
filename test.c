@@ -7,7 +7,7 @@
 int setup_and_handshake(struct magpie_context* server_context, struct magpie_context* client_context, char* logger_level);
 int test_generate_time(struct magpie_context* client_context, char* filepath);
 int test_handle_time(struct magpie_context* client_context, struct magpie_context* server_context, char* filepath);
-int test_generate_and_handle_time(struct magpie_context* client_context, struct magpie_context* server_context, char* filepath);
+int test_generate_and_handle_time(struct magpie_context* client_context, struct magpie_context* server_context, char* in_filepath, char* out_filepath);
 
 int main(int argc, char *argv[])
 {
@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
     struct magpie_context client_context;
     struct magpie_context server_context;
 
-    /* Time test 1: How long just to generate the packets? */
+    /* Time test 1: How long just to generate the packets (Client side) */
     printf("\n Testing just generate\n");
     setup_and_handshake(&server_context, &client_context, logger_level);
 
@@ -34,6 +34,7 @@ int main(int argc, char *argv[])
     test_generate_time(&client_context, "test_4M.txt");
     test_generate_time(&client_context, "test_5M.txt");
 
+    /* Time test 2: How long to just handle the packets (Server side) */
     printf("\n Testing just handle time\n"); 
     setup_and_handshake(&server_context, &client_context, logger_level); //need to reset context since in test 1 it never gets "handled"
 
@@ -43,15 +44,15 @@ int main(int argc, char *argv[])
     test_handle_time(&client_context, &server_context, "test_4M.txt");
     test_handle_time(&client_context, &server_context, "test_5M.txt");
 
-    /* Time test 3: How long just to both generate and handle? */
+    /* Time test 3: How long to both generate and handle? */
     printf("\n Testing both generate and handle\n"); 
     setup_and_handshake(&server_context, &client_context, logger_level); //need to reset context since in test 1 it never gets "handled"
     
-    test_generate_and_handle_time(&client_context, &server_context, "test_1M.txt");
-    test_generate_and_handle_time(&client_context, &server_context, "test_2M.txt");
-    test_generate_and_handle_time(&client_context, &server_context, "test_3M.txt");
-    test_generate_and_handle_time(&client_context, &server_context, "test_4M.txt");
-    test_generate_and_handle_time(&client_context, &server_context, "test_5M.txt");
+    test_generate_and_handle_time(&client_context, &server_context, "test_1M.txt", "1M_out.txt");
+    test_generate_and_handle_time(&client_context, &server_context, "test_2M.txt", "2M_out.txt");
+    test_generate_and_handle_time(&client_context, &server_context, "test_3M.txt", "3M_out.txt");
+    test_generate_and_handle_time(&client_context, &server_context, "test_4M.txt", "4M_out.txt");
+    test_generate_and_handle_time(&client_context, &server_context, "test_5M.txt", "5M_out.txt");
     return 0;
 }
 
@@ -120,6 +121,7 @@ int test_handle_time(struct magpie_context* client_context, struct magpie_contex
     struct timeval tv_end;
 
     struct magpie_packet packet_from_client;
+    memset(&packet_from_client, 0, sizeof(struct magpie_packet));
     
     FILE* client_in = fopen(filepath, "r");
     magpie_set_input_buffer(client_context, client_in, 0);
@@ -127,10 +129,10 @@ int test_handle_time(struct magpie_context* client_context, struct magpie_contex
     FILE* server_out = fopen("server_output.txt", "w");
     magpie_set_output_buffer(server_context, server_out, 0);
 
-    int client_ret, server_ret;
+    int server_ret;
     double total_time = 0;
     while (true) {
-        client_ret = magpie_generate_packet(client_context, &packet_from_client);
+        magpie_generate_packet(client_context, &packet_from_client);
         gettimeofday(&tv_start, NULL);
         server_ret = magpie_handle_packet(server_context, &packet_from_client);
         gettimeofday(&tv_end, NULL);
@@ -143,6 +145,7 @@ int test_handle_time(struct magpie_context* client_context, struct magpie_contex
     }
 
     printf("time to just handle packets: %f\n", total_time);
+    fclose(server_out);
     fclose(client_in);
 
     return 0;
@@ -150,25 +153,26 @@ int test_handle_time(struct magpie_context* client_context, struct magpie_contex
 
 
 
-int test_generate_and_handle_time(struct magpie_context* client_context, struct magpie_context* server_context, char* filepath) {
-    //just to test how long it takes to generate packets for a given file
+int test_generate_and_handle_time(struct magpie_context* client_context, struct magpie_context* server_context, char* in_filepath, char* out_filepath) {
+    //just to test how long it takes to generate packets for a given file and handle them
     struct timeval tv_start;
     struct timeval tv_end;
 
     struct magpie_packet packet_from_client;
+    memset(&packet_from_client, 0, sizeof(struct magpie_packet));
     
-    FILE* client_in = fopen(filepath, "r");
+    FILE* client_in = fopen(in_filepath, "r");
     magpie_set_input_buffer(client_context, client_in, 0);
 
-    FILE* server_out = fopen("server_output.txt", "w");
+    FILE* server_out = fopen(out_filepath, "w");
     magpie_set_output_buffer(server_context, server_out, 0);
 
     //start timer
     gettimeofday(&tv_start, NULL);
 
-    int client_ret, server_ret;
+    int server_ret;
     while (true) {
-        client_ret = magpie_generate_packet(client_context, &packet_from_client);
+        magpie_generate_packet(client_context, &packet_from_client);
         server_ret = magpie_handle_packet(server_context, &packet_from_client);
         //printf("Loop [ counter=%d ret1=%d ]\n", coutner++, client_ret);
         if (server_ret == HC_TRANSFER_COMPELTE) {
@@ -179,12 +183,13 @@ int test_generate_and_handle_time(struct magpie_context* client_context, struct 
     double generate_time = timediff(&tv_start, &tv_end);
 
     printf("time to both generate and handle packets: %f\n", generate_time);
+    fclose(server_out);
     fclose(client_in);
 
     return 0;
 }
 
-
+/*
 int test_full_sequence(struct magpie_context* server_context, struct magpie_context* client_context) {
 
     struct timeval tv_start;
@@ -255,4 +260,4 @@ int test_full_sequence(struct magpie_context* server_context, struct magpie_cont
     fclose(server_out);
 
     return 0;
-}
+}*/
