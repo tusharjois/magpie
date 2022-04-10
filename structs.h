@@ -58,6 +58,7 @@ enum magpie_state {
 
 enum magpie_handler_codes {
     HC_UNKNOWN_ERROR = -100,
+    HC_KEYFILE_ERROR = -12,
     HC_DECRYPTION_HASH_FORGED = -11,
     HC_DECRYPTION_MESSAGE_FORGED = -10,
     HC_DECRYPTION_PROBE_FAILED = -9,

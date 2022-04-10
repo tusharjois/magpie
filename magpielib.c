@@ -8,7 +8,7 @@
 //"frontend" functions
 
 int magpie_setup_context(struct magpie_context* context, char* key_filepath, int is_server, char* logger_level) {
-    logger(DEBUG, "Entered context setup\n");
+    logger(TRACE, "Entered context setup");
     //everything null to start
     memset(context, 0, sizeof(struct magpie_context));
 
@@ -20,7 +20,7 @@ int magpie_setup_context(struct magpie_context* context, char* key_filepath, int
     if (hydro_init() != 0)
     {
         logger(FATAL, "LibHydrogen failed to initialize. Aborting :(\n");
-        exit(1);
+        return HC_LIBHYDROGEN_ERROR;
     }
 
     //make sure key_filepath exists
@@ -29,7 +29,7 @@ int magpie_setup_context(struct magpie_context* context, char* key_filepath, int
         fclose(file); 
     } else {
         logger(FATAL, "Incorrect or nonexistent key_filepath: %s - Aborting :(\n", key_filepath);
-        exit(1);
+        return HC_KEYFILE_ERROR;
     }
 
     // Setup local Diffie-Hellman keypair
@@ -52,7 +52,7 @@ int magpie_setup_context(struct magpie_context* context, char* key_filepath, int
 
     context->rx_seq_num = context->tx_seq_num = INIT_SEQ_NUM;
 
-    return 0;
+    return HC_OKAY;
 }
 
 int magpie_set_input_buffer(struct magpie_context* context, void* buffer, int buffer_len) {
@@ -189,7 +189,7 @@ int handle_handshake_xx_1(struct magpie_context* context, struct magpie_packet* 
     if (packet->meta.seq_num != HANDSHAKE_XX_1_SEQ_NUM) {
         logger(ERROR, "Incorrect sequence num, something went wrong\n");
         return HC_INCORRECT_PACKET_TYPE;
-    }
+    } 
     
     //process packet
     logger(DEBUG, "copying to context buffer");
