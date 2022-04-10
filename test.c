@@ -1,13 +1,19 @@
 //test.c
 
 #include <sys/time.h>
+#include <assert.h>
 #include "helper.h"
 #include "magpielib.h"
 
+int timing_tests(char* logger_level);
 int setup_and_handshake(struct magpie_context* server_context, struct magpie_context* client_context, char* logger_level);
 int test_generate_time(struct magpie_context* client_context, char* filepath);
 int test_handle_time(struct magpie_context* client_context, struct magpie_context* server_context, char* filepath);
 int test_generate_and_handle_time(struct magpie_context* client_context, struct magpie_context* server_context, char* in_filepath, char* out_filepath);
+int test_MITM_ciphertext_packet(struct magpie_context* client_context, struct magpie_context* server_context, char* in_filepath, char* out_filepath);
+int test_MITM_meta_packet(struct magpie_context* client_context, struct magpie_context* server_context, char* in_filepath, char* out_filepath);
+int test_MITM_probe_packet(struct magpie_context* client_context, struct magpie_context* server_context, char* in_filepath, char* out_filepath);
+int test_replay_attack(struct magpie_context* client_context, struct magpie_context* server_context, char* in_filepath, char* out_filepath);
 
 int main(int argc, char *argv[])
 {
@@ -20,13 +26,30 @@ int main(int argc, char *argv[])
     }
 
     char* logger_level = argv[1];
+    //timing_tests(logger_level);
+
+    struct magpie_context client_context;
+    struct magpie_context server_context;
+    setup_and_handshake(&server_context, &client_context, logger_level);
+
+    test_MITM_ciphertext_packet(&client_context, &server_context, "test_1M.txt", "MITM.txt");
+    test_MITM_meta_packet(&client_context, &server_context, "test_1M.txt", "MITM.txt");
+    test_MITM_probe_packet(&client_context, &server_context, "test_1M.txt", "MITM.txt");
+    
+    setup_and_handshake(&server_context, &client_context, logger_level); //need to reset context 
+    test_replay_attack(&client_context, &server_context, "test_1M.txt", "MITM.txt");
+    
+    return 0;
+}
+
+int timing_tests(char* logger_level){
+
     struct magpie_context client_context;
     struct magpie_context server_context;
 
     /* Time test 1: How long just to generate the packets (Client side) */
     printf("\n Testing just generate\n");
     setup_and_handshake(&server_context, &client_context, logger_level);
-
 
     test_generate_time(&client_context, "test_1M.txt");
     test_generate_time(&client_context, "test_2M.txt");
@@ -53,6 +76,7 @@ int main(int argc, char *argv[])
     test_generate_and_handle_time(&client_context, &server_context, "test_3M.txt", "3M_out.txt");
     test_generate_and_handle_time(&client_context, &server_context, "test_4M.txt", "4M_out.txt");
     test_generate_and_handle_time(&client_context, &server_context, "test_5M.txt", "5M_out.txt");
+   
     return 0;
 }
 
@@ -152,7 +176,6 @@ int test_handle_time(struct magpie_context* client_context, struct magpie_contex
 }
 
 
-
 int test_generate_and_handle_time(struct magpie_context* client_context, struct magpie_context* server_context, char* in_filepath, char* out_filepath) {
     //just to test how long it takes to generate packets for a given file and handle them
     struct timeval tv_start;
@@ -188,6 +211,120 @@ int test_generate_and_handle_time(struct magpie_context* client_context, struct 
 
     return 0;
 }
+
+int test_MITM_ciphertext_packet(struct magpie_context* client_context, struct magpie_context* server_context, char* in_filepath, char* out_filepath) {
+
+    printf("Testing MITM ciphertext\n");
+    struct magpie_packet packet_from_client;
+    memset(&packet_from_client, 0, sizeof(struct magpie_packet));
+
+    FILE* client_in = fopen(in_filepath, "r");
+    magpie_set_input_buffer(client_context, client_in, 0);
+
+    FILE* server_out = fopen(out_filepath, "w");
+    magpie_set_output_buffer(server_context, server_out, 0);
+
+    //client generates a packet from the file
+    magpie_generate_packet(client_context, &packet_from_client);
+
+    //"man in the middle" modifies the packet
+    char mal[] = "Malicious text!";
+    memcpy(packet_from_client.ciphertext, mal, sizeof(mal));
+
+    //now server receives it
+    int server_ret = magpie_handle_packet(server_context, &packet_from_client);
+
+    assert(server_ret == HC_DECRYPTION_FAILED);
+
+    fclose(client_in);
+    fclose(server_out);
+    return 0;
+}
+
+int test_MITM_meta_packet(struct magpie_context* client_context, struct magpie_context* server_context, char* in_filepath, char* out_filepath) {
+
+    printf("Testing MITM meta sequence num\n");
+    struct magpie_packet packet_from_client;
+    memset(&packet_from_client, 0, sizeof(struct magpie_packet));
+
+    FILE* client_in = fopen(in_filepath, "r");
+    magpie_set_input_buffer(client_context, client_in, 0);
+
+    FILE* server_out = fopen(out_filepath, "w");
+    magpie_set_output_buffer(server_context, server_out, 0);
+
+    //client generates a packet from the file
+    magpie_generate_packet(client_context, &packet_from_client);
+
+    //"man in the middle" modifies the packet sequence number in the metadata
+    packet_from_client.meta.seq_num = 5;
+
+    //now server receives it
+    int server_ret = magpie_handle_packet(server_context, &packet_from_client);
+
+    assert(server_ret == HC_DECRYPTION_FAILED);
+
+    fclose(client_in);
+    fclose(server_out);
+    return 0;
+}
+
+int test_MITM_probe_packet(struct magpie_context* client_context, struct magpie_context* server_context, char* in_filepath, char* out_filepath) {
+
+    printf("Testing MITM probe\n");
+    struct magpie_packet packet_from_client;
+    memset(&packet_from_client, 0, sizeof(struct magpie_packet));
+
+    FILE* client_in = fopen(in_filepath, "r");
+    magpie_set_input_buffer(client_context, client_in, 0);
+
+    FILE* server_out = fopen(out_filepath, "w");
+    magpie_set_output_buffer(server_context, server_out, 0);
+
+    //client generates a packet from the file
+    magpie_generate_packet(client_context, &packet_from_client);
+
+    //"man in the middle" modifies the probe
+    char mal[] = "Modifying the probe!";
+    memcpy(packet_from_client.probe, mal, sizeof(mal));
+
+    //now server receives it
+    int server_ret = magpie_handle_packet(server_context, &packet_from_client);
+
+    assert(server_ret == HC_DECRYPTION_FAILED);
+
+    fclose(client_in);
+    fclose(server_out);
+    return 0;
+}
+
+int test_replay_attack(struct magpie_context* client_context, struct magpie_context* server_context, char* in_filepath, char* out_filepath) {
+    printf("Testing replay attack \n");
+    struct magpie_packet packet_from_client;
+    memset(&packet_from_client, 0, sizeof(struct magpie_packet));
+
+    FILE* client_in = fopen(in_filepath, "r");
+    magpie_set_input_buffer(client_context, client_in, 0);
+
+    FILE* server_out = fopen(out_filepath, "w");
+    magpie_set_output_buffer(server_context, server_out, 0);
+
+    //client generates a packet from the file
+    magpie_generate_packet(client_context, &packet_from_client);
+
+    //now server receives it, correctly
+    int server_ret = magpie_handle_packet(server_context, &packet_from_client);
+    assert(server_ret == HC_OKAY);
+
+    //attacker sends packet to server again, and this time it fails
+    server_ret = magpie_handle_packet(server_context, &packet_from_client);
+    assert(server_ret == HC_DECRYPTION_FAILED);
+
+    fclose(client_in);
+    fclose(server_out);
+    return 0;
+}
+
 
 /*
 int test_full_sequence(struct magpie_context* server_context, struct magpie_context* client_context) {
