@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
     /** key exchange (xx variant): server **/
 
     struct magpie_context server_context;
-    setup_context(&server_context, "keys/keypair_1", true);
+    magpie_setup_context(&server_context, "keys/keypair_1", true);
     printf("Server context loaded...\n");
 
     FILE* server_fd = fopen("temp.txt", "w");
