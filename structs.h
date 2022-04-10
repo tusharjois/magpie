@@ -38,13 +38,6 @@
 #define TRANSFER_START_SEQ_NUM 4
 
 #define WINDOW_SIZE 4
-// DEPRECATED
-//#define READ_DATA_SIZE (PLAINTEXT_SIZE - 32)
-//#define WRITE_DATA_SIZE (PLAINTEXT_SIZE - 32)
-//#define FIRST_MESSAGE_IDX 1
-//#define MAX_FILE_NAME 256
-//#define START_SEQ_NUM 1
-//#define NUM_MODE_BYTES 2
 
 enum magpie_type {
     HANDSHAKE_XX_1 = 1, 
@@ -113,20 +106,12 @@ struct magpie_buffer {
 };
 
 struct magpie_context {
-    // int sk;  // server
     int is_server;
     unsigned short local_id;
     unsigned short remote_id;
     
     struct timeval operation_start;
-    // struct timeval last_heartbeat;  // server
-    // struct timeval timeout;  // server
     int bytes_transferred;
-
-    // struct sockaddr_in remote_addr;  // server
-
-    // char filename[NAME_LENGTH];
-    // char operation[NAME_LENGTH];
 
     struct magpie_buffer send_buffer;
     struct magpie_buffer recv_buffer;
