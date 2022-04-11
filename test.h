@@ -23,6 +23,6 @@ int test_MITM_probe_packet(struct magpie_context* client_context, struct magpie_
 
 int test_replay_attack(struct magpie_context* client_context, struct magpie_context* server_context, char* in_filepath, char* out_filepath);
 
-
+int test_replay_false_seq_attack(struct magpie_context* client_context, struct magpie_context* server_context, char* in_filepath, char* out_filepath);
 
 #endif

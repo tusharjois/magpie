@@ -28,7 +28,10 @@ int main(int argc, char *argv[])
     
     setup_and_handshake(&server_context, &client_context, logger_level); //need to reset context 
     test_replay_attack(&client_context, &server_context, "test_1M.txt", "MITM.txt");
-    
+
+    setup_and_handshake(&server_context, &client_context, logger_level);
+    test_replay_false_seq_attack(&client_context, &server_context, "test_1M.txt", "MITM.txt");
+
     return 0;
 }
 
@@ -118,7 +121,7 @@ int test_generate_time(struct magpie_context* client_context, char* filepath) {
         gettimeofday(&tv_end, NULL);
         double gen_time = timediff(&tv_start, &tv_end);
         total_time += gen_time;
-        if (client_ret == HC_TRANSFER_COMPELTE) {
+        if (client_ret == HC_TRANSFER_COMPLETE) {
            break;
         }   
     }
@@ -153,7 +156,7 @@ int test_handle_time(struct magpie_context* client_context, struct magpie_contex
         double handle_time = timediff(&tv_start, &tv_end);
         total_time += handle_time;
         //printf("Loop [ counter=%d ret1=%d ]\n", coutner++, client_ret);
-        if (server_ret == HC_TRANSFER_COMPELTE) {
+        if (server_ret == HC_TRANSFER_COMPLETE) {
            break;
         }   
     }
@@ -188,7 +191,7 @@ int test_generate_and_handle_time(struct magpie_context* client_context, struct 
         magpie_generate_packet(client_context, &packet_from_client);
         server_ret = magpie_handle_packet(server_context, &packet_from_client);
         //printf("Loop [ counter=%d ret1=%d ]\n", coutner++, client_ret);
-        if (server_ret == HC_TRANSFER_COMPELTE) {
+        if (server_ret == HC_TRANSFER_COMPLETE) {
            break;
         }   
     }
@@ -307,6 +310,36 @@ int test_replay_attack(struct magpie_context* client_context, struct magpie_cont
     assert(server_ret == HC_OKAY);
 
     //attacker sends packet to server again, and this time it fails
+    server_ret = magpie_handle_packet(server_context, &packet_from_client);
+    assert(server_ret == HC_DECRYPTION_FAILED);
+
+    fclose(client_in);
+    fclose(server_out);
+    return 0;
+}
+
+int test_replay_false_seq_attack(struct magpie_context* client_context, struct magpie_context* server_context, char* in_filepath, char* out_filepath) {
+    printf("Testing replay attack with false sequence number\n");
+    struct magpie_packet packet_from_client;
+    memset(&packet_from_client, 0, sizeof(struct magpie_packet));
+
+    FILE* client_in = fopen(in_filepath, "r");
+    magpie_set_input_buffer(client_context, client_in, 0);
+
+    FILE* server_out = fopen(out_filepath, "w");
+    magpie_set_output_buffer(server_context, server_out, 0);
+
+    //client generates a packet from the file
+    magpie_generate_packet(client_context, &packet_from_client);
+
+    //now server receives it, correctly
+    int server_ret = magpie_handle_packet(server_context, &packet_from_client);
+    assert(server_ret == HC_OKAY);
+
+    //attacker modifies seq to make it look like the correct packet
+    packet_from_client.meta.seq_num = packet_from_client.meta.seq_num + 1;
+
+    // still, it fails. 
     server_ret = magpie_handle_packet(server_context, &packet_from_client);
     assert(server_ret == HC_DECRYPTION_FAILED);
 
