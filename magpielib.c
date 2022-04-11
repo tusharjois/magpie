@@ -92,7 +92,7 @@ int magpie_generate_packet(struct magpie_context* context, struct magpie_packet*
         return HC_ENCRYPTION_FAILED;
     }
     if (context->send_buffer.is_empty)
-        return HC_TRANSFER_COMPELTE;
+        return HC_TRANSFER_COMPLETE;
 
     return HC_ONE_TO_SEND;
 }
@@ -133,7 +133,7 @@ int magpie_handle_packet(struct magpie_context* context, struct magpie_packet* p
 
     logger(DEBUG, "finished handling");
     if (message.is_last_packet)
-        return HC_TRANSFER_COMPELTE;
+        return HC_TRANSFER_COMPLETE;
     else 
         return HC_OKAY;
 }

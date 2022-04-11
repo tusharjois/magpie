@@ -75,7 +75,7 @@ enum magpie_handler_codes {
     HC_MORE_TO_SEND = 2,
     HC_LAST_TO_SEND = 3,
     HC_MESSAGE_FROM_SELF = 4,
-    HC_TRANSFER_COMPELTE = 5
+    HC_TRANSFER_COMPLETE = 5
 };
 
 struct magpie_meta {
