@@ -7,7 +7,11 @@
 
 int setup_and_handshake(struct magpie_context* server_context, struct magpie_context* client_context, char* logger_level);
 
-int timing_tests(char* logger_level);
+int timing_tests_small(char* logger_level);
+
+int timing_tests_medium(char* logger_level);
+
+int timing_tests_large(char* logger_level);
 
 int test_generate_time(struct magpie_context* client_context, char* filepath);
 
