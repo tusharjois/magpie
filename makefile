@@ -1,6 +1,6 @@
 CC=gcc 
 
-CFLAGS = -g -c -Wall -pedantic
+CFLAGS = -g -c -pedantic -Wno-stringop-overflow -Wno-stringop-overread
 
 all: test generate_keys
 
