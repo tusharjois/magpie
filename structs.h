@@ -17,14 +17,6 @@
 #include "logger.h"
 #include "libhydrogen/hydrogen.h"
 
-
-#define PORT 10225
-#define MCAST_ADDR (225 << 24 | 1 << 16 | 1 << 8 | 140) /* (225.1.1.140) */
-// #define NAME_LENGTH 100
-#define MAX_STRING_LEN 1024
-#define MESS_BUFF_LEN 2048
-
-// #define BURST_SIZE 5
 #define CONTEXT "HYDROGEN"
 
 #define PACKET_SIZE 1400
