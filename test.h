@@ -4,7 +4,6 @@
 #include "helper.h"
 #include "magpielib.h"
 
-
 int setup_and_handshake(struct magpie_context* server_context, struct magpie_context* client_context, char* logger_level);
 
 int timing_tests_small(char* logger_level);
