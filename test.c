@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 
     timing_tests_small(logger_level);
     timing_tests_medium(logger_level);
-    timing_tests_large(logger_level);
+    //timing_tests_large(logger_level);
 
     test_MITM_ciphertext_packet(&client_context, &server_context, "testfiles/test_1M.txt", "MITM.txt");
     test_MITM_meta_packet(&client_context, &server_context, "testfiles/test_1M.txt", "MITM.txt");
