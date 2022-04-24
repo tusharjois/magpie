@@ -4,7 +4,7 @@
 #define keys_H
 
 #include <stdlib.h>
-#include "hydrogen.h"
+#include "libydrogen/hydrogen.h"
 
 int load_hydro_kx_keypair(hydro_kx_keypair* kp, char* filepath);
 

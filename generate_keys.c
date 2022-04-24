@@ -7,7 +7,7 @@
 #include <unistd.h>
 
 #include "logger.h"
-#include "hydrogen.h"
+#include "libhydrogen/hydrogen.h"
 
 /* A script to generate a local keypair. 
 The new keypair will be saved in a directory called keys and a file called keypair_x.txt */

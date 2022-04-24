@@ -15,7 +15,7 @@
 
 
 #include "logger.h"
-#include "hydrogen.h"
+#include "libhydrogen/hydrogen.h"
 
 
 #define PORT 10225
