@@ -101,6 +101,7 @@ int magpie_handle_packet(struct magpie_context* context, struct magpie_packet* p
     logger(DEBUG, "handle_packet() [ state=%d is_server=%d tx=%d rx=%d ]", context->state, context->is_server, context->tx_seq_num, context->rx_seq_num);
 
     //we might receive our own packet on a broadcast network
+    //NOTE: for test.c to work, this must be commented out 
     if (packet->meta.sender_id != context->local_id) {
         logger(DEBUG, "ignoring packet from ourselves");
         return HC_OKAY;
