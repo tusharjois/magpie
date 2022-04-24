@@ -25,16 +25,16 @@ int main(int argc, char *argv[])
     timing_tests_small(logger_level);
     timing_tests_medium(logger_level);
     timing_tests_large(logger_level);
-    
-    test_MITM_ciphertext_packet(&client_context, &server_context, "test_1M.txt", "MITM.txt");
-    test_MITM_meta_packet(&client_context, &server_context, "test_1M.txt", "MITM.txt");
-    test_MITM_probe_packet(&client_context, &server_context, "test_1M.txt", "MITM.txt");
+
+    test_MITM_ciphertext_packet(&client_context, &server_context, "testfiles/test_1M.txt", "MITM.txt");
+    test_MITM_meta_packet(&client_context, &server_context, "testfiles/test_1M.txt", "MITM.txt");
+    test_MITM_probe_packet(&client_context, &server_context, "testfiles/test_1M.txt", "MITM.txt");
     
     setup_and_handshake(&server_context, &client_context, logger_level); //need to reset context 
-    test_replay_attack(&client_context, &server_context, "test_1M.txt", "MITM.txt");
+    test_replay_attack(&client_context, &server_context, "testfiles/test_1M.txt", "MITM.txt");
 
     setup_and_handshake(&server_context, &client_context, logger_level);
-    test_replay_false_seq_attack(&client_context, &server_context, "test_1M.txt", "MITM.txt");
+    test_replay_false_seq_attack(&client_context, &server_context, "testfiles/test_1M.txt", "MITM.txt");
 
     return 0;
 }
@@ -48,31 +48,31 @@ int timing_tests_large(char* logger_level){
     printf("\n Testing just generate (large)\n");
     setup_and_handshake(&server_context, &client_context, logger_level);
 
-    test_generate_time(&client_context, "test_100M.txt");
-    test_generate_time(&client_context, "test_250M.txt");
-    test_generate_time(&client_context, "test_500M.txt");
-    test_generate_time(&client_context, "test_750M.txt");
-    test_generate_time(&client_context, "test_1000M.txt");
+    test_generate_time(&client_context, "testfiles/test_100M.txt");
+    test_generate_time(&client_context, "testfiles/test_250M.txt");
+    test_generate_time(&client_context, "testfiles/test_500M.txt");
+    test_generate_time(&client_context, "testfiles/test_750M.txt");
+    test_generate_time(&client_context, "testfiles/test_1000M.txt");
 
     /* Time test 2: How long to just handle the packets (Server side) */
     printf("\n Testing just handle time (large)\n"); 
     setup_and_handshake(&server_context, &client_context, logger_level); //need to reset context since in test 1 it never gets "handled"
 
-    test_handle_time(&client_context, &server_context, "test_100M.txt");
-    test_handle_time(&client_context, &server_context, "test_250M.txt");
-    test_handle_time(&client_context, &server_context, "test_500M.txt");
-    test_handle_time(&client_context, &server_context, "test_750M.txt");
-    test_handle_time(&client_context, &server_context, "test_1000M.txt");
+    test_handle_time(&client_context, &server_context, "testfiles/test_100M.txt");
+    test_handle_time(&client_context, &server_context, "testfiles/test_250M.txt");
+    test_handle_time(&client_context, &server_context, "testfiles/test_500M.txt");
+    test_handle_time(&client_context, &server_context, "testfiles/test_750M.txt");
+    test_handle_time(&client_context, &server_context, "testfiles/test_1000M.txt");
 
     /* Time test 3: How long to both generate and handle? */
     printf("\n Testing both generate and handle (large)\n"); 
     setup_and_handshake(&server_context, &client_context, logger_level); //need to reset context since in test 1 it never gets "handled"
     
-    test_generate_and_handle_time(&client_context, &server_context, "test_100M.txt", "100M_out.txt");
-    test_generate_and_handle_time(&client_context, &server_context, "test_250M.txt", "250M_out.txt");
-    test_generate_and_handle_time(&client_context, &server_context, "test_500M.txt", "500M_out.txt");
-    test_generate_and_handle_time(&client_context, &server_context, "test_750M.txt", "750M_out.txt");
-    test_generate_and_handle_time(&client_context, &server_context, "test_1000M.txt", "1000M_out.txt");
+    test_generate_and_handle_time(&client_context, &server_context, "testfiles/test_100M.txt", "testfiles/100M_out.txt");
+    test_generate_and_handle_time(&client_context, &server_context, "testfiles/test_250M.txt", "testfiles/250M_out.txt");
+    test_generate_and_handle_time(&client_context, &server_context, "testfiles/test_500M.txt", "testfiles/500M_out.txt");
+    test_generate_and_handle_time(&client_context, &server_context, "testfiles/test_750M.txt", "testfiles/750M_out.txt");
+    test_generate_and_handle_time(&client_context, &server_context, "testfiles/test_1000M.txt", "testfiles/1000M_out.txt");
    
     return 0;
 }
@@ -86,31 +86,31 @@ int timing_tests_small(char* logger_level){
     printf("\n Testing just generate (small)\n");
     setup_and_handshake(&server_context, &client_context, logger_level);
 
-    test_generate_time(&client_context, "test_100.txt");
-    test_generate_time(&client_context, "test_250.txt");
-    test_generate_time(&client_context, "test_500.txt");
-    test_generate_time(&client_context, "test_750.txt");
-    test_generate_time(&client_context, "test_1000.txt");
+    test_generate_time(&client_context, "testfiles/test_100.txt");
+    test_generate_time(&client_context, "testfiles/test_250.txt");
+    test_generate_time(&client_context, "testfiles/test_500.txt");
+    test_generate_time(&client_context, "testfiles/test_750.txt");
+    test_generate_time(&client_context, "testfiles/test_1000.txt");
 
     /* Time test 2: How long to just handle the packets (Server side) */
     printf("\n Testing just handle time (small) \n"); 
     setup_and_handshake(&server_context, &client_context, logger_level); //need to reset context since in test 1 it never gets "handled"
 
-    test_handle_time(&client_context, &server_context, "test_100.txt");
-    test_handle_time(&client_context, &server_context, "test_250.txt");
-    test_handle_time(&client_context, &server_context, "test_500.txt");
-    test_handle_time(&client_context, &server_context, "test_750.txt");
-    test_handle_time(&client_context, &server_context, "test_1000.txt");
+    test_handle_time(&client_context, &server_context, "testfiles/test_100.txt");
+    test_handle_time(&client_context, &server_context, "testfiles/test_250.txt");
+    test_handle_time(&client_context, &server_context, "testfiles/test_500.txt");
+    test_handle_time(&client_context, &server_context, "testfiles/test_750.txt");
+    test_handle_time(&client_context, &server_context, "testfiles/test_1000.txt");
 
     /* Time test 3: How long to both generate and handle? */
     printf("\n Testing both generate and handle(small) \n"); 
     setup_and_handshake(&server_context, &client_context, logger_level); //need to reset context since in test 1 it never gets "handled"
     
-    test_generate_and_handle_time(&client_context, &server_context, "test_100.txt", "100_out.txt");
-    test_generate_and_handle_time(&client_context, &server_context, "test_250.txt", "250_out.txt");
-    test_generate_and_handle_time(&client_context, &server_context, "test_500.txt", "500_out.txt");
-    test_generate_and_handle_time(&client_context, &server_context, "test_750.txt", "750_out.txt");
-    test_generate_and_handle_time(&client_context, &server_context, "test_1000.txt", "1000_out.txt");
+    test_generate_and_handle_time(&client_context, &server_context, "testfiles/test_100.txt", "testfiles/100_out.txt");
+    test_generate_and_handle_time(&client_context, &server_context, "testfiles/test_250.txt", "testfiles/250_out.txt");
+    test_generate_and_handle_time(&client_context, &server_context, "testfiles/test_500.txt", "testfiles/500_out.txt");
+    test_generate_and_handle_time(&client_context, &server_context, "testfiles/test_750.txt", "testfiles/750_out.txt");
+    test_generate_and_handle_time(&client_context, &server_context, "testfiles/test_1000.txt", "testfiles/1000_out.txt");
    
     return 0;
 }
@@ -124,31 +124,31 @@ int timing_tests_medium(char* logger_level){
     printf("\n Testing just generate (medium)\n");
     setup_and_handshake(&server_context, &client_context, logger_level);
 
-    test_generate_time(&client_context, "test_100k.txt");
-    test_generate_time(&client_context, "test_250k.txt");
-    test_generate_time(&client_context, "test_500k.txt");
-    test_generate_time(&client_context, "test_750k.txt");
-    test_generate_time(&client_context, "test_1000k.txt");
+    test_generate_time(&client_context, "testfiles/test_100k.txt");
+    test_generate_time(&client_context, "testfiles/test_250k.txt");
+    test_generate_time(&client_context, "testfiles/test_500k.txt");
+    test_generate_time(&client_context, "testfiles/test_750k.txt");
+    test_generate_time(&client_context, "testfiles/test_1000k.txt");
 
     /* Time test 2: How long to just handle the packets (Server side) */
     printf("\n Testing just handle time (medium) \n"); 
     setup_and_handshake(&server_context, &client_context, logger_level); //need to reset context since in test 1 it never gets "handled"
 
-    test_handle_time(&client_context, &server_context, "test_100k.txt");
-    test_handle_time(&client_context, &server_context, "test_250k.txt");
-    test_handle_time(&client_context, &server_context, "test_500k.txt");
-    test_handle_time(&client_context, &server_context, "test_750k.txt");
-    test_handle_time(&client_context, &server_context, "test_1000k.txt");
+    test_handle_time(&client_context, &server_context, "testfiles/test_100k.txt");
+    test_handle_time(&client_context, &server_context, "testfiles/test_250k.txt");
+    test_handle_time(&client_context, &server_context, "testfiles/test_500k.txt");
+    test_handle_time(&client_context, &server_context, "testfiles/test_750k.txt");
+    test_handle_time(&client_context, &server_context, "testfiles/test_1000k.txt");
 
     /* Time test 3: How long to both generate and handle? */
     printf("\n Testing both generate and handle(medium) \n"); 
     setup_and_handshake(&server_context, &client_context, logger_level); //need to reset context since in test 1 it never gets "handled"
     
-    test_generate_and_handle_time(&client_context, &server_context, "test_100k.txt", "100k_out.txt");
-    test_generate_and_handle_time(&client_context, &server_context, "test_250k.txt", "250k_out.txt");
-    test_generate_and_handle_time(&client_context, &server_context, "test_500k.txt", "500k_out.txt");
-    test_generate_and_handle_time(&client_context, &server_context, "test_750k.txt", "750k_out.txt");
-    test_generate_and_handle_time(&client_context, &server_context, "test_1000k.txt", "1000k_out.txt");
+    test_generate_and_handle_time(&client_context, &server_context, "testfiles/test_100k.txt", "testfiles/100k_out.txt");
+    test_generate_and_handle_time(&client_context, &server_context, "testfiles/test_250k.txt", "testfiles/250k_out.txt");
+    test_generate_and_handle_time(&client_context, &server_context, "testfiles/test_500k.txt", "testfiles/500k_out.txt");
+    test_generate_and_handle_time(&client_context, &server_context, "testfiles/test_750k.txt", "testfiles/750k_out.txt");
+    test_generate_and_handle_time(&client_context, &server_context, "testfiles/test_1000k.txt", "testfiles/1000k_out.txt");
    
     return 0;
 }
@@ -223,7 +223,7 @@ int test_handle_time(struct magpie_context* client_context, struct magpie_contex
     FILE* client_in = fopen(filepath, "r");
     magpie_set_input_buffer(client_context, client_in, 0);
 
-    FILE* server_out = fopen("server_output.txt", "w");
+    FILE* server_out = fopen("testfiles/server_output.txt", "w");
     magpie_set_output_buffer(server_context, server_out, 0);
 
     int server_ret;
