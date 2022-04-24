@@ -36,6 +36,7 @@ int main(int argc, char *argv[])
     setup_and_handshake(&server_context, &client_context, logger_level);
     test_replay_false_seq_attack(&client_context, &server_context, "testfiles/test_1M.txt", "MITM.txt");
 
+    logger(INFO, "All tests successful!");
     return 0;
 }
 
